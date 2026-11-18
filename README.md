@@ -197,6 +197,22 @@ architecture. They are blessed on arm64 macOS; CI runs on x86-64 Linux with
 `E2E_NO_GOLDEN=1`, which keeps the load and console-error checks and skips the
 pixel comparison.
 
+## Releasing the command
+
+The command is distributed from a separate, public repository,
+[jdf/historyflow-cli](https://github.com/jdf/historyflow-cli): GitHub releases
+with a binary per platform, and a Homebrew formula. To release, set the version
+in `Cargo.toml`, commit and push, then:
+
+```sh
+tools/release.sh 0.2.0
+```
+
+That tags this repository and starts the release workflow in the public one,
+which checks this repository out with a read-only deploy key
+(`SOURCE_DEPLOY_KEY` there), builds for macOS (Apple silicon and Intel) and
+Linux (x86-64, static), publishes the release and rewrites the formula.
+
 ## Deployment
 
 `./deploy` publishes to https://mrfeinberg.com/historyflow/. It mirrors

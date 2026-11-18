@@ -96,6 +96,14 @@ browser; `PATH` is a git repository, a file in one, or a history file.
   repository in a temporary directory (`tests/common`), and `tools/e2e.sh`
   builds one for the browser test of the command.
 
+## Releases
+
+`tools/release.sh <version>` tags this repository and dispatches `release.yml`
+in the public `jdf/historyflow-cli` (cloned at `~/projects/historyflow-cli`),
+which builds from here with a read-only deploy key and publishes the release and
+`Formula/historyflow.rb` there. Publishing is outward-facing: never run it
+unless asked.
+
 ## The Wikipedia source
 
 It runs in the page, since Wikipedia allows cross-origin reads. The half that
