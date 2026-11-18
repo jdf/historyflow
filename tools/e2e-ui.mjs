@@ -260,6 +260,73 @@ try {
     "zooming out stops at the whole history",
     (await view()).join() === "0,1",
   );
+  // --- The scroll thumb appears when zoomed in, shows the part of the
+  // history on screen, and can be dragged.
+  const bar = () =>
+    page.evaluate(() => {
+      const track = document.getElementById("scroll");
+      const t = track.getBoundingClientRect();
+      const b = document.getElementById("thumb").getBoundingClientRect();
+      return {
+        hidden: track.hidden,
+        left: b.left - t.left,
+        width: b.width,
+        track: t.width,
+        x: t.left,
+        y: t.top + 2,
+      };
+    });
+  check("zoomed out, there is no scroll thumb", (await bar()).hidden);
+  await wheel(12 + plotWidth / 2, { deltaY: -500 });
+  seen = await view();
+  let thumb = await bar();
+  check("zoomed in, the scroll thumb appears", !thumb.hidden, thumb);
+  check("the track spans the plot", near(thumb.track, plotWidth, 1), thumb);
+  check(
+    "the thumb is as wide as the share of history on screen",
+    near(thumb.width, seen[1] * plotWidth, 1),
+    thumb,
+  );
+  check(
+    "the thumb starts where the view does",
+    near(thumb.left, seen[0] * plotWidth, 1),
+    thumb,
+  );
+  await page.mouse.move(thumb.x + thumb.left + thumb.width / 2, thumb.y);
+  await page.mouse.down();
+  await page.mouse.move(thumb.x + thumb.left + thumb.width / 2 + 100, thumb.y, {
+    steps: 3,
+  });
+  await pause(60);
+  let dragged = await view();
+  check(
+    "dragging the thumb pans by the same share of the history",
+    near(dragged[0] - seen[0], 100 / plotWidth, 2e-3),
+    dragged,
+  );
+  await page.mouse.move(thumb.x + 5000, thumb.y, { steps: 3 });
+  await page.mouse.up();
+  await pause(60);
+  dragged = await view();
+  check(
+    "the thumb stops at the end of the track",
+    near(dragged[0] + dragged[1], 1, 1e-5),
+    dragged,
+  );
+  check(
+    "dragging the thumb leaves the crosshair alone",
+    (await cursor()).version === 0,
+  );
+  await page.mouse.click(thumb.x + 3, thumb.y);
+  await pause(60);
+  check(
+    "a press on the track moves the thumb there",
+    (await view())[0] === 0,
+    await view(),
+  );
+  for (let i = 0; i < 5; i++) await wheel(12 + plotWidth / 2, { deltaY: 2000 });
+  check("zoomed back out, the thumb goes away", (await bar()).hidden);
+
   await page.select("#spacing", "date");
   await pause(60);
   check(

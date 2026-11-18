@@ -52,7 +52,61 @@ function draw() {
   canvas.width = Math.round(canvas.clientWidth * ratio);
   canvas.height = Math.round(canvas.clientHeight * ratio);
   app.draw(ratio);
+  showThumb();
 }
+
+// --- The scroll thumb -----------------------------------------------------
+
+// Under the plot, when zoomed in, a thumb shows which part of the history
+// is on screen, and can be dragged; like any scrollbar's, it has a least
+// size, so its travel rather than its edges maps to the view's.
+const scroll = $("scroll");
+const thumb = $("thumb");
+const LEAST_THUMB = 16;
+
+function thumbGeometry() {
+  const [start, width] = app.view();
+  const track = scroll.clientWidth;
+  const size = Math.max(LEAST_THUMB, width * track);
+  // How far the thumb can move, and how far the view can.
+  return { start, width, size, travel: track - size, range: 1 - width };
+}
+
+function showThumb() {
+  scroll.hidden = app.view()[1] > 0.9999;
+  if (scroll.hidden) return;
+  const { start, size, travel, range } = thumbGeometry();
+  thumb.style.width = `${size}px`;
+  thumb.style.left = `${range > 0 ? (start / range) * travel : 0}px`;
+}
+
+// Puts the thumb's left edge `left` pixels along the track.
+function moveThumbTo(left) {
+  const { width, travel, range } = thumbGeometry();
+  if (travel <= 0) return;
+  app.set_view((Math.max(0, Math.min(travel, left)) / travel) * range, width);
+  scheduleDraw();
+}
+
+thumb.onpointerdown = (event) => {
+  event.stopPropagation();
+  thumb.setPointerCapture(event.pointerId);
+  thumb.classList.add("held");
+  const grabbed = event.clientX - thumb.getBoundingClientRect().left;
+  const trackLeft = scroll.getBoundingClientRect().left;
+  thumb.onpointermove = (move) =>
+    moveThumbTo(move.clientX - trackLeft - grabbed);
+  thumb.onpointerup = () => {
+    thumb.classList.remove("held");
+    thumb.onpointermove = thumb.onpointerup = null;
+  };
+};
+// A press on the track beside the thumb centres the thumb there.
+scroll.onpointerdown = (event) => {
+  const { size } = thumbGeometry();
+  moveThumbTo(event.clientX - scroll.getBoundingClientRect().left - size / 2);
+};
+scroll.addEventListener("wheel", (event) => onWheel(event), { passive: false });
 
 // Draws once, before the next repaint, however many times it is asked:
 // wheel events arrive faster than frames.

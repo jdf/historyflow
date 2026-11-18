@@ -41,7 +41,9 @@ the selected version's author.
 The mouse wheel and trackpad move through time: scroll up and down (or pinch) to
 zoom about the pointer, scroll sideways to pan. Zooming out stops when the whole
 history fills the plot, and zooming in when three revisions do. Only time zooms;
-the whole document is always in view top to bottom.
+the whole document is always in view top to bottom. While zoomed in, a scroll
+thumb under the plot shows which part of the history is on screen; drag it, or
+press beside it, to move.
 
 With no bundle the page shows `web/samples/demo.json`, a synthetic wiki page
 written by `tools/make-sample.py`.

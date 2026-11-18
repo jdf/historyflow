@@ -89,9 +89,44 @@ h2 {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-#plot {
+#stage {
   flex: 1;
   min-width: 0;
+  position: relative;
+}
+/* Shown only when zoomed in: the thumb is the part of the history on
+   screen. It sits in the plot's bottom margin, under the author marks,
+   and spans the plot's width (the canvas less its 12px margins). */
+#scroll {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 0;
+  height: 4px;
+  background: #2a2a2a;
+  border-radius: 2px;
+  cursor: pointer;
+}
+/* Easier to hit than it looks. */
+#scroll::before {
+  content: "";
+  position: absolute;
+  inset: -6px 0 0;
+}
+#thumb {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: #999;
+  border-radius: 2px;
+  cursor: grab;
+}
+#thumb:hover,
+#thumb.held {
+  background: #ddd;
+}
+#plot {
+  width: 100%;
   height: 100%;
   display: block;
   cursor: crosshair;
