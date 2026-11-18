@@ -51,11 +51,11 @@ Presets: `Config::prose()`, `Config::sentences_2004()`, `Config::source_lines()`
 (lines + pairwise). `cargo run --release -p historyflow-core --example scale` is
 a rough performance check.
 
-`layout` turns a `History` into `Quad`s in normalised coordinates (x across
+`layout` turns a `History` into `Quad`s in normalized coordinates (x across
 versions, y down the document, every version top-aligned): one per stretch of
 same-origin text in each version's line, and one per such stretch in each link
-between consecutive versions. Colour is not in the geometry: a quad carries its
-author and its age, and the shader picks the colour, so changing the colouring
+between consecutive versions. Color is not in the geometry: a quad carries its
+author and its age, and the shader picks the color, so changing the coloring
 never rebuilds anything.
 
 An `Archive` is how a history is held and stored: the `SourceVersion`s, with
@@ -122,6 +122,8 @@ Tests never touch the network: `core` tests use a canned response, and
 - `wasm-bindgen` is pinned with `=` in `crates/web/Cargo.toml`; the CLI is
   installed to match from `Cargo.lock`. Bump the crate and the CLI follows.
 - `unsafe` is forbidden workspace-wide.
+- American spelling everywhere: code, comments, docs, UI text and commit
+  messages (color, gray, license, behavior, normalize).
 - Markdown, `web/` and `tools/*.mjs` are formatted by prettier
   (`proseWrap: always`); Rust by rustfmt. Presubmit enforces both.
 - Only time (x) zooms. `View` (core) is the window onto the layout's x axis,
@@ -140,6 +142,6 @@ Tests never touch the network: `core` tests use a canned response, and
 - The crosshair's y and the text panel are linked through `passages()`: each
   passage of a version's text carries its y extent on the version's line, and
   `web/app.js` maps between that and the span's position in the scrolled text.
-  Behaviour of that kind is tested in `tools/e2e-ui.mjs`, not by screenshots.
+  Behavior of that kind is tested in `tools/e2e-ui.mjs`, not by screenshots.
 - Any rendering change needs an e2e case in `tools/e2e.sh` and a blessed golden.
   Look at the received image before blessing.

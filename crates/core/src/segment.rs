@@ -4,7 +4,7 @@ use std::ops::Range;
 
 /// A text split into three nested levels: blocks contain units, units
 /// contain atoms. Atoms are the pieces that get token identities; units
-/// and blocks exist so that [`Matching::Historical`] can recognise larger
+/// and blocks exist so that [`Matching::Historical`] can recognize larger
 /// unchanged or restored passages by hash before comparing atoms.
 ///
 /// Every atom belongs to exactly one unit and every unit to exactly one
@@ -195,7 +195,7 @@ impl Segmenter for Sentences {
 /// Whole lines, for source code.
 ///
 /// - An atom is one line without its terminator (`\n` or `\r\n`). Blank
-///   lines are atoms too. Nothing inside a line is normalised: a change
+///   lines are atoms too. Nothing inside a line is normalized: a change
 ///   of indentation is a change to the line.
 /// - Each line is its own unit, and the whole text is one block.
 #[derive(Debug, Default, Clone, Copy)]

@@ -108,7 +108,7 @@ mod tests {
         let xs = even(11);
         let min = View::min_width(&xs);
         assert!(close(min, 0.2));
-        // However hard the zoom, centred on version 5.
+        // However hard the zoom, centered on version 5.
         let view = View::FULL.zoom(1e-9, 0.5, min);
         assert!(close(view.width, 0.2));
         assert!(close(view.across(xs[4]), 0.0));

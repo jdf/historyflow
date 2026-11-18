@@ -9,7 +9,7 @@ writes the history as a bundle and has the historyflow command convert
 that to an archive.
 
     growth        several authors adding paragraphs over time
-    anonymous     two authors with no account (drawn in greys)
+    anonymous     two authors with no account (drawn in grays)
     vandalism     the page blanked twice and restored a minute later
     edit war      two authors swapping a paragraph back and forth
     move          a paragraph moved from the end to the start
@@ -24,7 +24,7 @@ from pathlib import Path
 rng = random.Random(2004)
 WORDS = """history flow visual document author edit page text version wiki
 community revision sentence change time pattern growth conflict cooperation
-vandalism repair stable line colour ribbon length article people together
+vandalism repair stable line color ribbon length article people together
 shared record trace survive rewrite argue restore discuss agree knowledge
 public open simple rapid careful small large early late first lasting""".split()
 

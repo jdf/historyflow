@@ -1,4 +1,4 @@
-// e2e behaviour tests: drives the real page in the pinned Chrome and
+// e2e behavior tests: drives the real page in the pinned Chrome and
 // checks what the screenshots cannot — that the crosshair, the text
 // panel and the keyboard stay in step. Driven by tools/e2e.sh.
 //

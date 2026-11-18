@@ -8,13 +8,13 @@ use web_sys::{
     WebGlTexture, WebGlUniformLocation,
 };
 
-/// What colour means.
+/// What color means.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Coloring {
     /// Hue by author; text darkens as it ages.
     #[default]
     Author,
-    /// No hue: white for new text through to dark grey for old.
+    /// No hue: white for new text through to dark gray for old.
     Age,
 }
 
@@ -37,7 +37,7 @@ pub struct Overlay {
 const WHITE: [f32; 3] = [1.0, 1.0, 1.0];
 const ORANGE: [f32; 3] = [1.0, 0.55, 0.1];
 
-/// Fills a rectangle given in pixels with one colour.
+/// Fills a rectangle given in pixels with one color.
 const SOLID_VERTEX_SHADER: &str = "#version 300 es
 layout(location = 0) in vec2 corner;
 uniform vec2 viewport;
@@ -63,7 +63,7 @@ const VERTEX_SHADER: &str = "#version 300 es
 // A corner of the unit square: x is 0 on the quad's left side and 1 on
 // its right, y is 0 at the top and 1 at the bottom.
 layout(location = 0) in vec2 corner;
-// Per quad, in the layout's normalised coordinates.
+// Per quad, in the layout's normalized coordinates.
 layout(location = 1) in vec2 xs;      // left x, right x
 layout(location = 2) in vec4 ys;      // left top, left bottom, right top, right bottom
 layout(location = 3) in vec3 info;    // author, left age, right age

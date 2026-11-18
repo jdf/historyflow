@@ -21,7 +21,7 @@ pub struct AuthorId(pub u32);
 pub struct Author {
     pub name: String,
     /// True for contributors with no account (a Wikipedia IP address).
-    /// The original drew these in white and greys.
+    /// The original drew these in white and grays.
     pub anonymous: bool,
 }
 

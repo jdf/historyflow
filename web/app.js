@@ -165,15 +165,15 @@ function onWheel(event) {
 
 // --- The text panel -------------------------------------------------------
 
-// The colour of text that `origin` introduced, seen in `version`: the
-// plot's colouring, but dimmed less with age so that old text stays
+// The color of text that `origin` introduced, seen in `version`: the
+// plot's coloring, but dimmed less with age so that old text stays
 // readable.
 function passageColor(author, origin, version) {
   const span = Math.max(1, summary.versions - 1);
   const aged = Math.min(1, (version - origin) / span);
   if (controls.coloring.value === "age") {
-    const grey = Math.round(255 * (1 - 0.6 * aged));
-    return `rgb(${grey} ${grey} ${grey})`;
+    const gray = Math.round(255 * (1 - 0.6 * aged));
+    return `rgb(${gray} ${gray} ${gray})`;
   }
   const hex = summary.authors[author].color;
   const dim = 1 - 0.4 * aged;

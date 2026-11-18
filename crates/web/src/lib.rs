@@ -208,7 +208,7 @@ impl App {
         self.upload()
     }
 
-    /// `author` (hue by author, darkening with age) or `age` (greys).
+    /// `author` (hue by author, darkening with age) or `age` (grays).
     pub fn set_coloring(&mut self, coloring: &str) -> Result<(), JsValue> {
         self.coloring = match coloring {
             "author" => Coloring::Author,

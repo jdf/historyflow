@@ -72,7 +72,7 @@ impl Config {
 
     /// The original's granularity: whole sentences, split at periods and
     /// HTML tags. Matched across the whole history, since the original's
-    /// figures show restored text keeping its authors' colours.
+    /// figures show restored text keeping its authors' colors.
     pub fn sentences_2004() -> Config {
         Config {
             segmenter: Box::new(Sentences),
@@ -405,7 +405,7 @@ mod tests {
         let h = build(Config::prose(), &["Alpha beta.", page, "VANDALISED", page]);
         assert_eq!(blame(&h, 2), "VANDALISED@2");
         assert_eq!(blame(&h, 3), blame(&h, 1));
-        // Nothing connects the vandalised version to its neighbours:
+        // Nothing connects the vandalised version to its neighbors:
         // the black gutter.
         assert_eq!(h.links(1, 2), []);
         assert_eq!(h.links(2, 3), []);

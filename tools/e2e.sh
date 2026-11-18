@@ -85,7 +85,7 @@ if [ "$VERIFIED" -ne "${#CASES[@]}" ]; then
   echo "e2e driver produced $VERIFIED of ${#CASES[@]} shots" >&2
   FAILED=1
 fi
-# Behaviour the screenshots cannot show: the crosshair, the text panel
+# Behavior the screenshots cannot show: the crosshair, the text panel
 # and the keyboard staying in step.
 # …and the historyflow command serving a repository: a small one made
 # here, the same every time.

@@ -60,7 +60,7 @@ Short names for the main sources (full URLs are in the sources list):
 ### Revision lines
 
 - **Each version is a vertical "revision line"** whose length is proportional to
-  the length of its text. Sections of the line are coloured by "who originally
+  the length of its text. Sections of the line are colored by "who originally
   authored them". [stated] CHI04 p.577. AW says "each document as a vertical
   line whose length corresponds to the length of the document."
 - **Unit of length.** The sources only say "length of its text". The tokens are
@@ -73,13 +73,13 @@ Short names for the main sources (full URLs are in the sources list):
 - **Vertical scale.** The scale appears to be one global pixels-per-character
   factor, set so the largest version fits the plot height. [inferred] from short
   early versions occupying a small fraction of the height in Figs. 3, 4 and 7.
-- **Revision lines also appear as thin, faint grey hairlines spanning the full
+- **Revision lines also appear as thin, faint gray hairlines spanning the full
   plot height**, including the empty black area below the text. They are visible
   as regularly spaced vertical rules in Figs. 3, 4 and 7 and in the IBM images.
   [observed]
-- **Small coloured ticks at the top of each revision line.** In the IBM
-  8-version image these are green, yellow, purple and white, matching the author
-  list. They probably mark the author of that revision. [observed and inferred]
+- **Small colored ticks at the top of each revision line.** In the IBM 8-version
+  image these are green, yellow, purple and white, matching the author list.
+  They probably mark the author of that revision. [observed and inferred]
 
 ### Connections (ribbons)
 
@@ -93,15 +93,15 @@ Short names for the main sources (full URLs are in the sources list):
   AW
 - **A ribbon is a straight-edged quadrilateral, not a curve.** Its left edge is
   the segment's span on line _i_, its right edge is the span on line _i+1_, and
-  it is filled with the author colour. [inferred] from the word "parallelogram"
+  it is filled with the author color. [inferred] from the word "parallelogram"
   and the straight diagonal edges in every figure. Because matched text has the
   same length in both versions, both edges have equal height, so the shape
   really is a parallelogram (sheared vertically).
-- **Ribbon colour versus line colour.** The explanatory diagram on IBM-how
-  (images `1.gif`…`5.gif`) shows saturated revision-line segments (orange, blue,
-  green) and the ribbons as darker, desaturated versions of the same hue.
-  [observed] In the real application screenshots ribbons and lines are hard to
-  tell apart; the lines read as slightly brighter columns. [observed]
+- **Ribbon color versus line color.** The explanatory diagram on IBM-how (images
+  `1.gif`…`5.gif`) shows saturated revision-line segments (orange, blue, green)
+  and the ribbons as darker, desaturated versions of the same hue. [observed] In
+  the real application screenshots ribbons and lines are hard to tell apart; the
+  lines read as slightly brighter columns. [observed]
 - **Moves produce crossing ribbons.** "people tend to delete and insert text
   more frequently than moving text… we see many more 'gaps' in the visualization
   than the type of crossing lines in Fig. 5." [stated] CHI04 p.581. IBM-results
@@ -116,7 +116,7 @@ Short names for the main sources (full URLs are in the sources list):
   and insertions." [stated] CHI04 p.577
 - **Insertions and deletions are drawn as gaps, not tapers.**
   - An insertion appears as a black triangular or trapezoidal gap to the left of
-    the new segment. The neighbouring ribbons diverge to make room.
+    the new segment. The neighboring ribbons diverge to make room.
   - A deletion appears as a gap to the right of the deleted segment.
   - [observed] in IBM-how `5.gif` (the space between version 2's ribbons and
     Suzanne's new blue segment) and throughout the screenshots. There is no
@@ -124,7 +124,7 @@ Short names for the main sources (full URLs are in the sources list):
     revision line with empty background before it.
 - **Background is black** in the application. [observed] in CHI04 Figs. 3–7.
   CHI04 p.578 also says "the abrupt black gutters represent instances of mass
-  deletions." The explanatory diagrams (CHI04 Fig. 2, IBM-how) use a grey or
+  deletions." The explanatory diagrams (CHI04 Fig. 2, IBM-how) use a gray or
   dotted background, but those are illustrations. [observed]
 
 ### Mass deletion and repair (the "black gutter")
@@ -135,17 +135,17 @@ Short names for the main sources (full URLs are in the sources list):
   black vertical stripe in equal-spacing mode. It disappears in date-spacing
   mode because the repair arrives within minutes. [stated] CHI04 p.578 (Figs. 4,
   5); IBM-results "Vandalism".
-- **Restored text keeps its original authorship colours.** In the enlarged CHI04
-  Fig. 4 (Abortion), the coloured stripes on the right of each black gutter
-  repeat the same colours in the same order as on the left. [observed] So the
+- **Restored text keeps its original authorship colors.** In the enlarged CHI04
+  Fig. 4 (Abortion), the colored stripes on the right of each black gutter
+  repeat the same colors in the same order as on the left. [observed] So the
   original did not assign restored sentences to the reverter. See §4 for what
   this implies about its attribution.
 
 ---
 
-## 2. Modes and colouring
+## 2. Modes and coloring
 
-### The four colour modes
+### The four color modes
 
 **[stated]** IBM-how and AW (identical wording): "history flow has four main
 visualization modes":
@@ -155,25 +155,25 @@ visualization modes":
    sentence."
 2. **Individual author view.** "highlights the contributions of a single author
    and it depicts the persistence of these contributions over time."
-3. **Recent Changes View** (the button is labelled "text changes"). "highlights
+3. **Recent Changes View** (the button is labeled "text changes"). "highlights
    the new content in each version of the Wiki page independent of authorship.
    This view allow us to see what portions of the text have been edited the most
    over time."
-4. **Age View** (the button is labelled "text age"). "this view has no colors
+4. **Age View** (the button is labeled "text age"). "this view has no colors
    representing authorship; instead, the focus is on the persistence of
    different contributions. A gray scale gradient goes from white (brand new
    contribution) to dark gray (very old contribution)."
 
 ### Toolbar and spacing
 
-- **Colour buttons** in the CHI04 Fig. 3 toolbar, each with a small icon:
+- **Color buttons** in the CHI04 Fig. 3 toolbar, each with a small icon:
   **group**, **individual**, **text changes**, **text age**, **links**.
   [observed]
-- **Spacing control:** radio buttons labelled **date** and **version**.
+- **Spacing control:** radio buttons labeled **date** and **version**.
   [observed] in Fig. 3.
 - **"links" mode is never described in any source I found.** It probably
   highlights wiki-link markup, since the text panel renders links underlined and
-  coloured. [inferred, unverified]
+  colored. [inferred, unverified]
 
 ### How each mode looks
 
@@ -192,8 +192,8 @@ visualization modes":
   dimmed but keeps a muted hue. [stated] IBM-results "Persistence"; [observed]
   `small_individual_author.gif` and `individual_thumbnails.gif`.
 - **Recent changes view.** Text that is new in a version is drawn in a bright
-  colour (the thumbnail shows green). Everything else is drawn in muted author
-  colours. [observed] `recent_changes_thumbnails.gif`. Whether "new" fades over
+  color (the thumbnail shows green). Everything else is drawn in muted author
+  colors. [observed] `recent_changes_thumbnails.gif`. Whether "new" fades over
   the next few versions or applies only to the version that introduced it is not
   stated. [inferred]
 
@@ -206,22 +206,22 @@ visualization modes":
 - In date mode, close revisions collapse onto nearly the same x, as in Fig. 2C
   ("2 3"). [observed]
 
-### Author colours and anonymous authors
+### Author colors and anonymous authors
 
 - Each contributor is "assigned a different color". [stated] CHI04 p.577
-- Anonymous authors are white or grey: "Several anonymous authors also made
+- Anonymous authors are white or gray: "Several anonymous authors also made
   contributions; their insertions are shown in shades of gray." "White and gray
   represent the contributions of anonymous authors." [stated] IBM-results. CHI04
   p.580 says pages written largely by anonymous users "show up as diagrams
   mostly in shades of gray".
-- Each anonymous IP probably gets its own grey level. [inferred] from the
-  visible variety of greys and whites.
+- Each anonymous IP probably gets its own gray level. [inferred] from the
+  visible variety of grays and whites.
 - I found no statement of the palette or of how hues are assigned. The
   screenshots show a fairly saturated, light palette on black: greens, salmon,
   peach, lavender, yellow, cyan. [observed] Assignment by first-appearance order
   or by hashing the name are both consistent with the images. [inferred]
 - **Bot or script authors are ordinary named authors.** "Conversion script" has
-  its own yellow colour in the IBM example. [stated] IBM-results: "three named
+  its own yellow color in the IBM example. [stated] IBM-results: "three named
   authors (listed at left), including a script which changed some formatting".
 
 ### Selection highlighting
@@ -253,15 +253,15 @@ visualization modes":
   - the page title (`"Microsoft" Wikipedia`) at the top left
   - **COLOR** with the five icon buttons
   - **SPACING** with the date and version radio buttons
-  - a dark grey header against a black plot
+  - a dark gray header against a black plot
 - **Left panel.** Two tab buttons, **authors** and **posts**. The authors list
-  shows a small colour swatch, the author name and a count. The count is
-  probably the number of revisions by that author (Hannes Hirzel 4, The Anome
-  14, Stephen Gilbert 10). [observed] What "posts" lists (probably revisions
-  with comments) is not documented. [inferred]
+  shows a small color swatch, the author name and a count. The count is probably
+  the number of revisions by that author (Hannes Hirzel 4, The Anome 14, Stephen
+  Gilbert 10). [observed] What "posts" lists (probably revisions with comments)
+  is not documented. [inferred]
 - **Right panel.** Shows the article text at the selected version and position.
-  The rendered text uses author colours for the text itself (orange, white, grey
-  runs), so the text panel matches the plot's colouring. Wiki links are
+  The rendered text uses author colors for the text itself (orange, white, gray
+  runs), so the text panel matches the plot's coloring. Wiki links are
   underlined, and section headings ("Hardware", "History of Microsoft") are
   styled. [observed] in Fig. 3.
 - **Menus.** The alphaWorks-era build has a menu bar. The Islam screenshot shows
@@ -305,7 +305,7 @@ visualization modes":
 
 ---
 
-## 4. Tokenisation and diff in the original
+## 4. Tokenization and diff in the original
 
 ### Unit: "sentences"
 
@@ -397,7 +397,7 @@ visualization modes":
   them". [stated] CHI04 p.577
 - The explicit wording only covers consecutive versions. Heckel compares only
   version _i_ with _i+1_.
-- **But the Abortion figure shows restored text in its original colours after
+- **But the Abortion figure shows restored text in its original colors after
   each gutter.** [observed] in CHI04 Fig. 4, enlarged.
 - That is impossible if authorship came only from the immediately preceding
   version, because the vandal's version contains almost nothing. [inferred]
@@ -406,8 +406,8 @@ visualization modes":
   anywhere in the history. Any later occurrence of an identical sentence
   inherits that origin, whether or not it was in the previous version. With
   exact-match sentence tokens this is a one-line hash-map lookup. It produces
-  exactly the "restored text keeps its colour" behaviour, while the ribbons
-  (from pairwise Heckel) still show a gap.
+  exactly the "restored text keeps its color" behavior, while the ribbons (from
+  pairwise Heckel) still show a gap.
 - **Unknown:** whether a revert by an author who first typed a sentence
   differently also inherits the origin, and how identical duplicate sentences
   inside one version were resolved. [unverified]
@@ -419,7 +419,7 @@ visualization modes":
 ## 5. Named patterns and example articles (acceptance tests)
 
 All from CHI04 or THESIS unless noted. The data were the Wikipedia dumps of May
-2003 (statistics) and August 2003 (visualisations; Microsoft had "198 versions
+2003 (statistics) and August 2003 (visualizations; Microsoft had "198 versions
 comprising 6.2 MB of text" as of August 2003). [stated]
 
 | Pattern                                                            | What it looks like                                                                | Example articles (source)                                                                                                                                                                                                                                                                                                            |
@@ -427,10 +427,10 @@ comprising 6.2 MB of text" as of August 2003). [stated]
 | **Vandalism and repair: mass deletion**                            | One-version full-height black gutters in equal spacing, invisible in date spacing | **Abortion**, Figs. 4 and 5 (CHI04 p.578; IBM-results). THESIS: "Each mass deletion took only a minute or so to be fixed!"                                                                                                                                                                                                           |
 | **Offensive copy, phony copy, phony redirect, idiosyncratic copy** | Single-version insertions: a lonely segment with no ribbons on either side        | **Chemistry** (full Windows 98 readme pasted); **Israel** redirected to "feces"; **Islam** (long Koran passages); **Cat** (Unix `cat` diatribe) (CHI04 p.579). THESIS Fig. 30, **Cat**: "this insertion of new material looks like a lonely white line… not linked to any of the subsequent versions"; it was moved to "Cat (Unix)". |
 | **Edit war / negotiation**                                         | Zigzag lasting a few versions                                                     | **Chocolate**, Fig. 6: two users fought over "coulage"; "12 consecutive versions of reverting back and forth" (CHI04 p.579). Visible only in equal spacing (THESIS Fig. 32).                                                                                                                                                         |
-| **Anonymous versus named authorship**                              | Mostly grey/white diagrams versus mostly coloured ones                            | Mostly anonymous: **Microsoft** (Fig. 3), Sex, Music, Libertarianism, Creation, Computer. Few anonymous: **Mythology, Evolution, Design, Brazil** (Fig. 7) (CHI04 p.580). IBM-results contrasts Evolution with Microsoft.                                                                                                            |
-| **Prolific anonymous contributor**                                 | One grey level persisting                                                         | **Capitalism**: an anonymous user edited 55 times between 22 Nov 2002 and 26 Jun 2003 (CHI04 p.580)                                                                                                                                                                                                                                  |
+| **Anonymous versus named authorship**                              | Mostly gray/white diagrams versus mostly colored ones                             | Mostly anonymous: **Microsoft** (Fig. 3), Sex, Music, Libertarianism, Creation, Computer. Few anonymous: **Mythology, Evolution, Design, Brazil** (Fig. 7) (CHI04 p.580). IBM-results contrasts Evolution with Microsoft.                                                                                                            |
+| **Prolific anonymous contributor**                                 | One gray level persisting                                                         | **Capitalism**: an anonymous user edited 55 times between 22 Nov 2002 and 26 Jun 2003 (CHI04 p.580)                                                                                                                                                                                                                                  |
 | **Growth: steady versus bursty**                                   | Black area shrinking steadily, or a sudden jump                                   | **Microsoft**: near-constant growth. **Abortion**: growth and shrinkage; the biggest shrink came when material moved to "abortion in Ireland". **Brazil**: "a sudden growth of over 100% of its size" (CHI04 p.580; IBM-results)                                                                                                     |
-| **First-mover advantage / persistence**                            | The first author's colour survives longest, darkening with age                    | General observation (CHI04 p.580–581). **IBM**: Peter Winnberg's green persists (IBM-results). **Islam**: one author's highlighted text persists (IBM-results "Persistence")                                                                                                                                                         |
+| **First-mover advantage / persistence**                            | The first author's color survives longest, darkening with age                     | General observation (CHI04 p.580–581). **IBM**: Peter Winnberg's green persists (IBM-results). **Islam**: one author's highlighted text persists (IBM-results "Persistence")                                                                                                                                                         |
 | **Insert/delete much more common than moves**                      | Many gaps, few crossings                                                          | CHI04 p.581                                                                                                                                                                                                                                                                                                                          |
 | **Rapid assimilation of news**                                     | Bursty growth                                                                     | **Iraq** tripled in size after the March 2003 invasion (CHI04 p.581); gallery has Iraq by time and by version (IBM-gallery)                                                                                                                                                                                                          |
 | **Talk-page archiving cycles** (later work)                        | Sawtooth: growth, then mass removal                                               | **Talk:God** (TBYT Fig. 7)                                                                                                                                                                                                                                                                                                           |
@@ -490,7 +490,7 @@ Abortion (versions and date), Capitalism (versions and text-changes).
     edit war became indistinguishable
 - **Performance techniques stated:** only the choice of a "simple", linear-time
   sentence-level Heckel ("decent results with sufficient efficiency"), and the
-  OpenGL rewrite. [stated] No other optimisations are documented. [unverified]
+  OpenGL rewrite. [stated] No other optimizations are documented. [unverified]
 - **Data source:**
   - full Wikipedia database dumps from download.wikipedia.org, loaded into MySQL
     for statistics
@@ -516,8 +516,8 @@ Abortion (versions and date), Capitalism (versions and text-changes).
 
 **Heckel 1978** (CACM 21(4):264–268)
 
-- Unique-token anchors, extended by neighbour propagation in forward and
-  backward passes. [stated] hdiff.
+- Unique-token anchors, extended by neighbor propagation in forward and backward
+  passes. [stated] hdiff.
 - O(n) time and space. Detects moves natively.
 - Weak on repeated tokens: no anchor means no match, so repeated blank lines,
   short sentences like "See also." or identical list items fall out unless
@@ -574,14 +574,14 @@ Abortion (versions and date), Capitalism (versions and text-changes).
 for the Wikipedia")
 
 - Word tokens.
-- Keeps, per page, a "live chunk" (current text, each word labelled with its
+- Keeps, per page, a "live chunk" (current text, each word labeled with its
   origin version) and "dead chunks" (previously deleted text).
 - Matching is a greedy algorithm that takes highest _match quality_ first:
   - for the live chunk: l/min(m_{i+1}, m′) − 0.3·|k′/m′ − k_{i+1}/m_{i+1}|, so
     long matches at the same relative position win
   - for dead chunks: 0 if l < 4, else l/min(m_{i+1}, m′) − 0.4
   - the same text may be matched multiple times, to resist duplication attacks
-  - coefficients were tuned against human judgements on Italian Wikipedia
+  - coefficients were tuned against human judgments on Italian Wikipedia
   - [stated]
     https://web.archive.org/web/2008id_/http://www2007.org/papers/paper692.pdf
     §3.1
@@ -590,7 +590,7 @@ for the Wikipedia")
   [stated] Flöck dissertation (ch. 4 related work, citing their earlier
   tree-model study):
   https://publikationen.bibliothek.kit.edu/1000058165/3879557. TokTrack
-  summarises it as "only around 50%". [stated] https://arxiv.org/pdf/1703.08244
+  summarizes it as "only around 50%". [stated] https://arxiv.org/pdf/1703.08244
 - de Alfaro & Shavlovsky note that WikiTrust's attribution "depends on the
   reputation computation".
 
@@ -602,7 +602,7 @@ for the Wikipedia")
   their implementation and threshold 4 words by default.
 - The match may be against _any_ previous revision.
 - Implemented with a trie of all "minimally interesting" n-grams (n = Δ) seen in
-  history, each labelled with its minimal origin labels.
+  history, each labeled with its minimal origin labels.
 - Per-revision update is O(len(ρn)) time; the summary is O(total change).
 - Content aging prunes trie nodes unseen for ΔN revisions and ΔT days. With ΔN =
   100 / ΔT = 90 days this changed attribution by 2.1% and cut the trie to 55%.
@@ -634,7 +634,7 @@ dissertation.
   - `<!-- -->` comments, `<ref …/ref>` and URLs are made into their own
     sentences
   - hashed and looked up the same way, previous revision then all history
-- **Tokens:** remaining unmatched sentences are tokenised (whitespace plus
+- **Tokens:** remaining unmatched sentences are tokenized (whitespace plus
   wiki-markup characters as both delimiters and tokens) and diffed against the
   unmatched words of the previous revision with Python `difflib.Differ`.
 - **Per-token tracking:** origin revision plus lists of out-revisions (deleted)
@@ -659,21 +659,21 @@ dissertation.
 | Crate                           | Version / updated   | What it actually provides                                                                                                                                                                                                                                                                                                                                                                                                         | Moves?                        |
 | ------------------------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
 | `similar`                       | 3.2.1 / 2026-10-24  | `Algorithm::{Myers (default, heuristic), RawMyers, Patience, Lcs, Hunt, Histogram}`. Diffs slices, lines, chars, graphemes (with the `unicode` feature); `capture_diff_slices_by_key`; deadlines (the `wasm32_web_time` feature avoids an `Instant::now` panic on wasm). [stated] https://docs.rs/similar                                                                                                                         | No                            |
-| `imara-diff`                    | 0.2.0 / 2025-06-14  | Linear-space Myers with heuristics, and Histogram ("ported from git and heavily optimized", "outperforms Myers diff by 10%–100%", "up to 30 times better than `similar`" by the authors' own benchmark). Token interning via `InternedInput`/`TokenSource`; `Diff::compute_with` on pre-tokenised lists; slider postprocessing. [stated] https://docs.rs/imara-diff                                                               | No                            |
+| `imara-diff`                    | 0.2.0 / 2025-06-14  | Linear-space Myers with heuristics, and Histogram ("ported from git and heavily optimized", "outperforms Myers diff by 10%–100%", "up to 30 times better than `similar`" by the authors' own benchmark). Token interning via `InternedInput`/`TokenSource`; `Diff::compute_with` on pre-tokenized lists; slider postprocessing. [stated] https://docs.rs/imara-diff                                                               | No                            |
 | `gix-diff`                      | 0.70.0 / 2026-10-22 | Gitoxide's blob/tree diff. Has a `wasm` feature toggle "to allow compilation to wasm32-unknown-unknown" (CHANGELOG). [stated] Whether its blob diff wraps imara-diff I did not verify.                                                                                                                                                                                                                                            | No                            |
 | `heckel-diff`                   | 1.0.0 / 2026-03-12  | Heckel 1978 on slices; immature. [stated]                                                                                                                                                                                                                                                                                                                                                                                         | Unverified                    |
 | `wikiwho` (`Schuwi/wikiwho_rs`) | 0.3.6 / 2026-07-12  | Rust port of WikiWho with separate MediaWiki XML parser and algorithm modules. Claims "exact token-level parity against the reference Python WikiWho", plus ≥85% precision on the paper's gold standard with its native diff (95% with the `python-diff` feature). Output per token: `o_rev_id`, editor, `in`/`out` revision lists. Versions ≤0.3.4 had an entity-truncation bug. WASM-compatibility not checked. [stated] README | Paragraph/sentence level only |
 | `dissimilar`                    | 1.0.11              | Google diff-match-patch port (character-level, semantic cleanup).                                                                                                                                                                                                                                                                                                                                                                 | No                            |
 | `diff`, `diffs`                 | old                 | LCS/Myers basics.                                                                                                                                                                                                                                                                                                                                                                                                                 | No                            |
 
-### Recommendation [inferred, my design judgement]
+### Recommendation [inferred, my design judgment]
 
 Split the problem in two. History flow's own architecture appears to have done
-the same: pairwise Heckel for ribbons, history-wide identity for colour.
+the same: pairwise Heckel for ribbons, history-wide identity for color.
 
 **A. Attribution: WikiWho-style hierarchical, history-wide hash matching.**
 
-1. Tokenise each version into paragraphs → sentences → words, with a pluggable
+1. Tokenize each version into paragraphs → sentences → words, with a pluggable
    tokenizer per data source:
    - Wikipedia: wikitext rules as in WikiWho
    - git: lines as "sentences"
@@ -682,7 +682,7 @@ the same: pairwise Heckel for ribbons, history-wide identity for colour.
    every unit ever seen, each carrying per-token origin IDs.
 3. For each new version, match units first against the previous version, then
    against history. Matched units inherit their token identities, and therefore
-   origin author and time. This gives the "restored text keeps colour" behaviour
+   origin author and time. This gives the "restored text keeps color" behavior
    of the original and is robust to reverts and partial reverts.
 4. For unmatched sentences, run a word-level diff, using `imara-diff` Histogram,
    against the unmatched words of the previous version. Optionally also run a de
@@ -692,7 +692,7 @@ the same: pairwise Heckel for ribbons, history-wide identity for colour.
    origin) and "recent change" for free.
 6. Offer a **"faithful 2004 mode"**: sentence-only tokens split on `.` and
    `<…>`, with no word-level step. It reproduces the
-   comma-changes-the-whole-sentence artefact.
+   comma-changes-the-whole-sentence artifact.
 
 **B. Ribbons: pairwise alignment derived from token identity, not from a second
 diff.**
@@ -700,11 +700,11 @@ diff.**
 - Because every token carries a stable ID, the ribbons between versions _i_ and
   _i+1_ are simply the maximal runs of token IDs that are contiguous in both
   versions. Runs that change order are moves and draw as crossing ribbons.
-  Tokens absent from the neighbour are gaps.
+  Tokens absent from the neighbor are gaps.
 - This is exactly Heckel's notion of linked lines, but computed from identity,
-  so it is linear and consistent with the colouring by construction.
+  so it is linear and consistent with the coloring by construction.
 - A token restored from an older version has an ID that is not present in _i_,
-  so it shows a gap on the left while keeping its old colour. That matches CHI04
+  so it shows a gap on the left while keeping its old color. That matches CHI04
   Fig. 4.
 
 **C. Why not the others alone:**
@@ -831,7 +831,7 @@ plain `git`)** [inferred]
   - full speed
   - no CORS or auth problems
   - handles huge repos
-  - can precompute tokenisation and attribution too
+  - can precompute tokenization and attribution too
 - Cons: an extra step for users; a hosted server would need to clone arbitrary
   repos.
 
@@ -916,7 +916,7 @@ blob fetches)** [inferred, not researched]
   of a program, with line-by-line coloring to indicate authorship or age"),
   **Ben Fry's _revisionist_** (cited [3]), **ThemeRiver** and **parallel
   coordinates** are cited by CHI04 as visual relatives. [stated] CHI04 p.578
-- **Chromograms** (Wattenberg, Viégas, Hollenbach, INTERACT 2007): colour-coded
+- **Chromograms** (Wattenberg, Viégas, Hollenbach, INTERACT 2007): color-coded
   tiles for very long edit sequences per user. A different technique. [stated]
   https://link.springer.com/doi/10.1007/978-3-540-74800-7_23. Not read.
 - **WikiDashboard** (PARC), **code_swarm**, **gource**: not researched; contrast
@@ -931,7 +931,7 @@ blob fetches)** [inferred, not researched]
   read the text. It may contain implementation details I have not seen.
 - **"The Hidden Order of Wikipedia"** (2007): not read.
 - **hint.fm history flow page and fernandaviegas.com:** not opened.
-  bewitched.com/historyflow.html was read only through a summariser (it gives
+  bewitched.com/historyflow.html was read only through a summarizer (it gives
   the creators, the chocolate/abortion examples and a MoMA image).
 - **MoMA entry** (https://www.moma.org/collection/works/110349): returned
   HTTP 403. Details known only from search snippets: _History Flow_, 2003,
@@ -943,9 +943,9 @@ blob fetches)** [inferred, not researched]
   - the exact tokenizer rules (delimiter attachment, whitespace and markup
     handling)
   - the age-darkening function
-  - the palette and colour-assignment rule
+  - the palette and color-assignment rule
   - what "links" mode and the "posts" tab do
-  - hover versus click behaviour
+  - hover versus click behavior
   - how duplicate sentences and restored text were attributed (the Fig. 4
     evidence suggests history-wide sentence identity)
   - the MediaWiki plug-in's fetch method
@@ -984,7 +984,7 @@ Primary (read):
   https://smg.media.mit.edu/papers/Viegas/viegas_thesis.pdf
 - Talk Before You Type (HICSS 2007):
   http://hint.fm/papers/wikipedia_coordination_final.pdf
-- Wattenberg's project page (via summariser):
+- Wattenberg's project page (via summarizer):
   https://bewitched.com/historyflow.html
 - Slashdot, 2005-03-28 alphaWorks release:
   https://news.slashdot.org/story/05/03/28/054225/history-flow-shows-how-wiki-articles-evolve

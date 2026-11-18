@@ -56,7 +56,7 @@ interleaves the two sides of a merge by date.
 
 Click or drag on the plot to place the crosshair: the vertical line picks a
 version, the horizontal line a place in it. The panel on the right shows that
-version's text, coloured as in the plot and scrolled to that place, marked by an
+version's text, colored as in the plot and scrolled to that place, marked by an
 orange line; scrolling the text moves the crosshair in turn. The left and right
 arrow keys step through versions. Dots under the plot mark the other versions by
 the selected version's author.
@@ -90,7 +90,7 @@ link straight to one: `?wiki=Chocolate&limit=500`.
 
 The page asks the wiki itself, 50 revisions at a time starting from the
 article's first, and draws the history as it arrives; **Stop** ends the fetch
-early. Editors without an account are drawn in white and greys. A revision whose
+early. Editors without an account are drawn in white and grays. A revision whose
 text the wiki's administrators have hidden is skipped.
 
 **Save** writes whatever is loaded as an archive (see below), so that a history

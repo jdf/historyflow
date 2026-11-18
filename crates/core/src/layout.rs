@@ -1,6 +1,6 @@
 //! Turning a history into geometry.
 //!
-//! Coordinates are normalised: x runs 0–1 from the first version to the
+//! Coordinates are normalized: x runs 0–1 from the first version to the
 //! last, y runs 0–1 from the top of the document to the end of the
 //! longest version. Every version starts at y = 0, so the empty space
 //! under the plot traces the document's length over time.
@@ -190,21 +190,21 @@ fn positions(history: &History, spacing: Spacing) -> Vec<f32> {
     }
 }
 
-/// A colour for each author, as RGB in 0–1. Named authors get distinct
+/// A color for each author, as RGB in 0–1. Named authors get distinct
 /// light, saturated hues in order of first appearance; anonymous authors
-/// get white and greys, as in the original.
+/// get white and grays, as in the original.
 pub fn author_colors(authors: &[Author]) -> Vec<[f32; 3]> {
-    const GREYS: [f32; 5] = [1.0, 0.78, 0.6, 0.9, 0.69];
+    const GRAYS: [f32; 5] = [1.0, 0.78, 0.6, 0.9, 0.69];
     let (mut named, mut anonymous) = (0, 0);
     authors
         .iter()
         .map(|author| {
             if author.anonymous {
                 anonymous += 1;
-                [GREYS[(anonymous - 1) % GREYS.len()]; 3]
+                [GRAYS[(anonymous - 1) % GRAYS.len()]; 3]
             } else {
                 named += 1;
-                // Golden-angle steps keep neighbouring authors far apart
+                // Golden-angle steps keep neighboring authors far apart
                 // in hue however many there are.
                 let hue = ((named - 1) as f32 * 137.508 + 25.0) % 360.0;
                 hsv(hue, 0.62, 1.0)
@@ -344,14 +344,14 @@ mod tests {
     }
 
     #[test]
-    fn a_single_version_is_centred_and_an_empty_history_is_empty() {
+    fn a_single_version_is_centered_and_an_empty_history_is_empty() {
         assert_eq!(layout(&history(&[(0, "a\n")]), Spacing::Date).xs, [0.5]);
         assert_eq!(layout(&history(&[]), Spacing::Version), Layout::default());
         assert_eq!(layout(&history(&[]), Spacing::Date), Layout::default());
     }
 
     #[test]
-    fn anonymous_authors_are_grey_and_named_authors_differ() {
+    fn anonymous_authors_are_gray_and_named_authors_differ() {
         let author = |name: &str, anonymous| Author {
             name: name.into(),
             anonymous,
