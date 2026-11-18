@@ -3,19 +3,38 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand, ValueEnum};
+use historyflow_cli::serve::{self, Subject};
 use historyflow_cli::{Error, git_file};
 use historyflow_core::{Archive, Mode};
 
-/// Turns a document's history into a file the history flow page loads.
+/// Shows how a document came to be, version by version: who wrote what,
+/// and what became of it.
 ///
-/// Files are written as archives, which hold only what each version
-/// changed, unless the name given ends in .json: then as a bundle, plain
-/// JSON with every version's text written out.
+/// With no command, opens the viewer in your browser on what PATH names:
+/// a git repository (any file's history, on request), a file in one, or
+/// a history file. Everything is served from this machine; nothing is
+/// fetched from anywhere else.
+///
+/// History files are written as archives (.hflow), which hold only what
+/// each version changed, unless the name given ends in .json: then as a
+/// bundle, plain JSON with every version's text written out.
 #[derive(Parser)]
-#[command(name = "historyflow", version)]
+#[command(name = "historyflow", version, args_conflicts_with_subcommands = true)]
 struct Cli {
+    /// A git repository, a file in one, or a history file.
+    #[arg(default_value = ".")]
+    path: PathBuf,
+    /// The port to serve on; another is chosen if it is taken.
+    #[arg(long, default_value_t = 8793)]
+    port: u16,
+    /// Print the address and do not open a browser.
+    #[arg(long)]
+    no_open: bool,
+    /// Follow only the first parent of merges.
+    #[arg(long)]
+    first_parent: bool,
     #[command(subcommand)]
-    command: Command,
+    command: Option<Command>,
 }
 
 #[derive(Subcommand)]
@@ -71,7 +90,16 @@ fn main() -> ExitCode {
 }
 
 fn run(cli: Cli) -> Result<(), Error> {
-    match cli.command {
+    let Some(command) = cli.command else {
+        let subject = Subject::at(&cli.path, cli.first_parent)?;
+        return serve::serve(&subject, cli.port, |address| {
+            eprintln!("history flow is at {address} — press Ctrl-C to stop");
+            if !cli.no_open {
+                open(address);
+            }
+        });
+    };
+    match command {
         Command::GitFile {
             file,
             output,
@@ -109,4 +137,22 @@ fn write(archive: &Archive, path: &Path) -> Result<(), Error> {
         path.display(),
     );
     Ok(())
+}
+
+/// Opens an address in the browser, as best this system can. Failing is
+/// harmless: the address has been printed.
+fn open(address: &str) {
+    let (program, args): (&str, &[&str]) = if cfg!(target_os = "macos") {
+        ("open", &[])
+    } else if cfg!(target_os = "windows") {
+        ("cmd", &["/c", "start", ""])
+    } else {
+        ("xdg-open", &[])
+    };
+    let _ = std::process::Command::new(program)
+        .args(args)
+        .arg(address)
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn();
 }

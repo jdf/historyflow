@@ -36,6 +36,12 @@ const FIELD: char = '\x1f';
 /// Reads the history of `file`, a path to a file inside a git working
 /// tree (it need not still exist, if its directory does).
 pub fn read(file: &Path, options: &Options) -> Result<Bundle, Error> {
+    let (root, path) = locate(file)?;
+    read_in(&root, &path, options)
+}
+
+/// The working tree a file is in, and the file's path within it.
+pub fn locate(file: &Path) -> Result<(PathBuf, String), Error> {
     let directory = match file.parent() {
         Some(parent) if !parent.as_os_str().is_empty() => parent,
         _ => Path::new("."),
@@ -44,15 +50,31 @@ pub fn read(file: &Path, options: &Options) -> Result<Bundle, Error> {
         .file_name()
         .and_then(OsStr::to_str)
         .ok_or("the path does not name a file")?;
-    let root = PathBuf::from(git(directory, &["rev-parse", "--show-toplevel"])?.trim_end());
     let prefix = git(directory, &["rev-parse", "--show-prefix"])?;
-    let path = format!("{}{name}", prefix.trim_end());
+    Ok((root(directory)?, format!("{}{name}", prefix.trim_end())))
+}
 
-    let commits = log(&root, &path, options)?;
+/// The top of the working tree `directory` is in.
+pub fn root(directory: &Path) -> Result<PathBuf, Error> {
+    let top = git(directory, &["rev-parse", "--show-toplevel"])?;
+    Ok(PathBuf::from(top.trim_end()))
+}
+
+/// Every file git tracks in the working tree at `root`, as paths within
+/// it, in git's order.
+pub fn files(root: &Path) -> Result<Vec<String>, Error> {
+    let listed = git(root, &["ls-files", "-z"])?;
+    Ok(listed.split_terminator('\0').map(str::to_string).collect())
+}
+
+/// Reads the history of the file at `path` within the working tree at
+/// `root`.
+pub fn read_in(root: &Path, path: &str, options: &Options) -> Result<Bundle, Error> {
+    let commits = log(root, path, options)?;
     if commits.is_empty() {
         return Err(format!("git has no history for {path}").into());
     }
-    let texts = contents(&root, &commits)?;
+    let texts = contents(root, &commits)?;
     let versions = commits
         .into_iter()
         .zip(texts)

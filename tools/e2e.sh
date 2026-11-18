@@ -30,7 +30,8 @@ CASES=(
   "demo-log|?no-ui&at=30,0.35&scale=log"
 )
 
-tools/build.sh release >/dev/null
+# The viewer, and the command with the viewer inside it.
+tools/build-cli.sh >/dev/null
 if [ ! -d node_modules/puppeteer-core ]; then
   npm install >/dev/null
 fi
@@ -86,7 +87,36 @@ if [ "$VERIFIED" -ne "${#CASES[@]}" ]; then
 fi
 # Behaviour the screenshots cannot show: the crosshair, the text panel
 # and the keyboard staying in step.
-if node tools/e2e-ui.mjs "$CHROME" "http://localhost:$PORT/"; then
+# …and the historyflow command serving a repository: a small one made
+# here, the same every time.
+REPO=build/e2e-repo
+COMMAND_PORT=8792
+rm -rf "$REPO" && mkdir -p "$REPO/src"
+commit() {  # author, seconds since 1970, message
+  git -C "$REPO" add -A
+  GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null \
+    GIT_AUTHOR_NAME="$1" GIT_AUTHOR_EMAIL=author@example.com GIT_AUTHOR_DATE="@$2 +0000" \
+    GIT_COMMITTER_NAME="$1" GIT_COMMITTER_EMAIL=author@example.com GIT_COMMITTER_DATE="@$2 +0000" \
+    git -C "$REPO" commit -q -m "$3"
+}
+git -C "$REPO" init -q -b main
+printf 'fn main() {\n    one();\n}\n' > "$REPO/src/main.rs"
+printf '# Notes\n\nSome words here.\n' > "$REPO/notes.md"
+commit ada 1000000000 "Start"
+printf 'fn main() {\n    one();\n    two();\n}\n' > "$REPO/src/main.rs"
+commit brooke 1000086400 "Add two"
+printf 'fn main() {\n    two();\n}\n\nfn two() {}\n' > "$REPO/src/main.rs"
+commit ada 1000172800 "Drop one, define two"
+lsof -ti :"$COMMAND_PORT" -sTCP:LISTEN 2>/dev/null | xargs kill 2>/dev/null || true
+target/release/historyflow "$REPO" --no-open --port "$COMMAND_PORT" 2>/dev/null &
+COMMAND_PID=$!
+trap 'kill $SERVER_PID $COMMAND_PID 2>/dev/null' EXIT
+for _ in $(seq 1 50); do
+  curl -sf -o /dev/null "http://127.0.0.1:$COMMAND_PORT/" && break
+  sleep 0.1
+done
+
+if node tools/e2e-ui.mjs "$CHROME" "http://localhost:$PORT/" "http://127.0.0.1:$COMMAND_PORT/"; then
   echo "e2e ui OK"
 else
   FAILED=1

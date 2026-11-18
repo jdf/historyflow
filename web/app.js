@@ -5,6 +5,8 @@
 // URL parameters, all optional:
 //   src       history file to load, an archive or a bundle (default: the
 //             demo)
+//   file      when served by the historyflow command on a repository: the
+//             file whose history to show, as a path within it
 //   wiki      instead of src: a Wikipedia article, by title or address,
 //             whose history to fetch
 //   limit     with wiki: how many revisions to fetch (default 500)
@@ -448,6 +450,94 @@ function report(error) {
   console.error(error);
 }
 
+// --- A repository, served by the historyflow command ----------------------
+
+// What the command's server said it is showing, or null on a plain web
+// host: { repository, files, open, history }.
+let session = null;
+// The file of the repository being shown.
+let repoFile = null;
+// No list this long is usable, or quick to build; filtering narrows it.
+const MOST_FILES_LISTED = 500;
+
+function showFiles() {
+  const wanted = $("file-filter").value.toLowerCase();
+  const matches = session.files.filter((path) =>
+    path.toLowerCase().includes(wanted),
+  );
+  const items = matches.slice(0, MOST_FILES_LISTED).map((path) => {
+    const item = document.createElement("li");
+    // The directory dim, the name bright. The item clips a long path at
+    // its start by being right-to-left; the <bdi> holds the path itself
+    // left to right inside it.
+    const cut = path.lastIndexOf("/") + 1;
+    const whole = document.createElement("bdi");
+    const name = document.createElement("span");
+    name.className = "name";
+    name.textContent = path.slice(cut);
+    whole.append(path.slice(0, cut), name);
+    item.append(whole);
+    item.title = path;
+    item.classList.toggle("current", path === repoFile);
+    item.onclick = () => openRepoFile(path);
+    return item;
+  });
+  if (matches.length > MOST_FILES_LISTED) {
+    const more = document.createElement("li");
+    more.className = "more";
+    more.textContent = `…and ${matches.length - MOST_FILES_LISTED} more; filter to narrow`;
+    items.push(more);
+  }
+  $("file-list").replaceChildren(...items);
+  $("file-list")
+    .querySelector(".current")
+    ?.scrollIntoView({ block: "nearest" });
+}
+
+// Shows the history of one of the repository's files, which the server
+// reads from git as it is asked.
+async function openRepoFile(path) {
+  repoFile = path;
+  showFiles();
+  history.replaceState(null, "", `?file=${encodeURIComponent(path)}`);
+  status.textContent = `Reading the history of ${path}…`;
+  try {
+    const response = await fetch(
+      `api/history?path=${encodeURIComponent(path)}`,
+    );
+    // The server explains a refusal in the body.
+    if (!response.ok) throw new Error(await response.text());
+    const file = new Uint8Array(await response.arrayBuffer());
+    // Another file may have been chosen while this one was being read.
+    if (repoFile === path) load(file, "", []);
+  } catch (error) {
+    report(error);
+  }
+}
+
+async function startSession(address) {
+  const response = await fetch(address);
+  if (!response.ok) throw new Error(`${address}: HTTP ${response.status}`);
+  session = await response.json();
+  if (session.history) {
+    const history = await fetch(session.history);
+    if (!history.ok) throw new Error(await history.text());
+    load(new Uint8Array(await history.arrayBuffer()), "", []);
+    return;
+  }
+  $("files").hidden = false;
+  $("file-filter").oninput = showFiles;
+  showFiles();
+  const first = params.get("file") ?? session.open;
+  if (first) {
+    await openRepoFile(first);
+  } else {
+    app.begin(session.repository, "lines");
+    showLoaded(JSON.parse(app.summary()), []);
+    status.textContent = `${session.files.length} files. Choose one to see its history.`;
+  }
+}
+
 async function readFile(file) {
   try {
     load(new Uint8Array(await file.arrayBuffer()), "", []);
@@ -467,9 +557,14 @@ try {
   app.set_height(controls.height.value);
   app.set_scale(controls.scale.value);
 
+  // The historyflow command marks the page it serves, so that only then
+  // does the page ask for a session; a plain web host has none to give.
+  const server = document.querySelector('meta[name="historyflow-server"]');
   if (params.has("wiki")) {
     // Not awaited: the history shows as it arrives.
     loadWikipedia(params.get("wiki"), Number(params.get("limit")) || 500);
+  } else if (server && !params.has("src")) {
+    await startSession(server.content);
   } else {
     const source = params.get("src") ?? "samples/demo.hflow";
     const response = await fetch(source);
@@ -588,6 +683,7 @@ try {
     yScale: () => [...app.y_scale_now()],
     moving: () => drawScheduled,
     summary: () => summary,
+    session: () => session,
     loading: () => loading !== null,
   };
   window.__historyflowReady = true;

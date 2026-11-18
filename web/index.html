@@ -65,8 +65,20 @@
     </header>
     <main>
       <aside>
-        <h2>authors</h2>
-        <ol id="authors"></ol>
+        <section id="files" hidden>
+          <h2>files</h2>
+          <input
+            id="file-filter"
+            type="search"
+            placeholder="Filter…"
+            autocomplete="off"
+          />
+          <ol id="file-list"></ol>
+        </section>
+        <section id="people">
+          <h2>authors</h2>
+          <ol id="authors"></ol>
+        </section>
       </aside>
       <div id="stage">
         <canvas id="plot"></canvas>

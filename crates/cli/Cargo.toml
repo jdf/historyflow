@@ -15,7 +15,9 @@ workspace = true
 [dependencies]
 clap = { version = "4.6.8", features = ["derive"] }
 historyflow-core = { path = "../core" }
+serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
+tiny_http = "0.12.0"
 
 [dev-dependencies]
 tempfile = "3.27.0"

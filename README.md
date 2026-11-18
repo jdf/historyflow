@@ -6,17 +6,41 @@ WebAssembly, drawing with WebGL2, inside a plain HTML and JavaScript page.
 
 Research notes on the original are in `docs/research/`.
 
-## Viewing a file's history
+## The `historyflow` command
 
-The page shows a history file: every version of one document, written by a data
-source. The first data source is one file in a git repository:
+The command carries the viewer inside it and serves it from your own machine;
+nothing is fetched from anywhere else.
 
 ```sh
-cargo run --release -p historyflow-cli -- git-file path/to/file.rs -o file.hflow
+tools/build-cli.sh                 # builds target/release/historyflow
+
+historyflow                        # browse the git repository you are in
+historyflow path/to/repo           # or another one
+historyflow src/main.rs            # a repository, opened on one file
+historyflow saved.hflow            # a history file
 ```
 
-Then open the page (`./dev`) and drop `file.hflow` on it, or use **Open…**. The
-file is followed across renames, and each commit that touched it is one version.
+Each opens your browser on the viewer. For a repository the page lists its
+tracked files, with a filter; choosing one reads that file's history from git
+there and then. The file is followed across renames, and each commit that
+touched it is one version. Markdown and other prose is compared by words, and
+everything else by lines; the **compare** menu changes it.
+
+`--no-open` prints the address without opening a browser, `--port` picks the
+port, and `--first-parent` follows only the mainline of merges. The server
+listens only on this machine, and refuses requests that were not addressed to it
+by name, so that a page on another site cannot read the repository through your
+browser.
+
+## Writing a history file
+
+The command also writes one file's history out, to keep or to pass on:
+
+```sh
+historyflow git-file path/to/file.rs -o file.hflow
+```
+
+Open it with `historyflow file.hflow`, or drop it on the page, or use **Open…**.
 
 | Option             | Effect                                                                                |
 | ------------------ | ------------------------------------------------------------------------------------- |
@@ -114,15 +138,15 @@ reading a file and working out its authorship in each mode.
 
 ## Layout
 
-| Path          | Contents                                                              |
-| ------------- | --------------------------------------------------------------------- |
-| `crates/core` | Platform-independent model, attribution and layout. Tested natively.  |
-| `crates/cli`  | The `historyflow` command: data sources that run outside the browser. |
-| `crates/web`  | wasm-bindgen exports and the WebGL2 renderer.                         |
-| `web/`        | The page: HTML, CSS and vanilla JavaScript. No bundler.               |
-| `tools/`      | Build, dev-server and end-to-end test scripts.                        |
-| `tests/`      | Approved end-to-end screenshots (`goldens/e2e`).                      |
-| `build/`      | Generated: `build/<profile>/dist` is the servable site. Not tracked.  |
+| Path          | Contents                                                                |
+| ------------- | ----------------------------------------------------------------------- |
+| `crates/core` | Platform-independent model, attribution and layout. Tested natively.    |
+| `crates/cli`  | The `historyflow` command: the local server, and sources that need git. |
+| `crates/web`  | wasm-bindgen exports and the WebGL2 renderer.                           |
+| `web/`        | The page: HTML, CSS and vanilla JavaScript. No bundler.                 |
+| `tools/`      | Build, dev-server and end-to-end test scripts.                          |
+| `tests/`      | Approved end-to-end screenshots (`goldens/e2e`).                        |
+| `build/`      | Generated: `build/<profile>/dist` is the servable site. Not tracked.    |
 
 ## Requirements
 

@@ -3,6 +3,7 @@
 //! [`historyflow_core::Bundle`]; [`write`] stores it compactly.
 
 pub mod git_file;
+pub mod serve;
 
 use std::path::Path;
 

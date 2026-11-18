@@ -2,10 +2,13 @@
 // checks what the screenshots cannot — that the crosshair, the text
 // panel and the keyboard stay in step. Driven by tools/e2e.sh.
 //
-//   node tools/e2e-ui.mjs <chrome> <base-url>
+//   node tools/e2e-ui.mjs <chrome> <base-url> <command-url>
+//
+// <base-url> is the viewer on a plain web server; <command-url> is the
+// historyflow command serving the small repository tools/e2e.sh makes.
 import puppeteer from "puppeteer-core";
 
-const [chrome, baseUrl] = process.argv.slice(2);
+const [chrome, baseUrl, commandUrl] = process.argv.slice(2);
 
 const args = ["--use-angle=swiftshader", "--hide-scrollbars"];
 if (process.env.CI) args.push("--no-sandbox");
@@ -651,6 +654,135 @@ try {
     said,
   );
   await wiki.close();
+  // --- The historyflow command: the same page, served with a repository
+  // to browse. Any file's history is read from git when it is chosen.
+  const repo = await browser.newPage();
+  await repo.setViewport({ width: 1200, height: 750, deviceScaleFactor: 1 });
+  repo.on("pageerror", (e) => check(`no uncaught errors: ${e.message}`, false));
+  const outside = [];
+  repo.on("request", (request) => {
+    if (!request.url().startsWith(commandUrl)) outside.push(request.url());
+  });
+  const repoState = () =>
+    repo.evaluate(() => ({
+      title: document.getElementById("title").textContent,
+      status: document.getElementById("status").textContent,
+      files: [...document.querySelectorAll("#file-list li")].map(
+        (item) => item.title,
+      ),
+      current: document.querySelector("#file-list li.current")?.title ?? null,
+      versions: window.__historyflow.summary()?.versions,
+      mode: window.__historyflow.summary()?.mode,
+      authors: (window.__historyflow.summary()?.authors ?? []).map(
+        (a) => `${a.name} ${a.versions}`,
+      ),
+      text: document.getElementById("text").textContent,
+      address: location.search,
+    }));
+  const openRepo = async (query) => {
+    await repo.goto(commandUrl + query, { waitUntil: "load" });
+    await eventually(
+      `${query} loads`,
+      () => repo.evaluate("window.__historyflowReady === true"),
+      Boolean,
+    );
+  };
+
+  await openRepo("?e2e");
+  let state = await repoState();
+  check(
+    "the repository's files are listed",
+    state.files.join() === "notes.md,src/main.rs",
+    state.files,
+  );
+  check(
+    "nothing is shown until a file is chosen",
+    state.versions === 0 && state.title === "e2e-repo",
+    state,
+  );
+  check(
+    "and the page says so",
+    state.status === "2 files. Choose one to see its history.",
+    state.status,
+  );
+
+  await repo.click('#file-list li[title="src/main.rs"]');
+  state = await eventually(
+    "choosing a file shows its history",
+    repoState,
+    (state) => state.versions === 3,
+  );
+  check(
+    "titled with the repository and the file",
+    state.title === "e2e-repo: src/main.rs",
+    state.title,
+  );
+  check(
+    "with its authors",
+    state.authors.join() === "ada 2,brooke 1",
+    state.authors,
+  );
+  check("compared by lines, as source", state.mode === "lines", state.mode);
+  check(
+    "and the newest version's text",
+    state.text === "fn main() {\n    two();\n}\n\nfn two() {}\n",
+    state.text,
+  );
+  check(
+    "the chosen file is marked in the list",
+    state.current === "src/main.rs",
+    state.current,
+  );
+  check(
+    "and named in the address, to link to",
+    state.address === "?file=src%2Fmain.rs",
+    state.address,
+  );
+
+  await repo.click('#file-list li[title="notes.md"]');
+  state = await eventually(
+    "choosing another file shows that one",
+    repoState,
+    (state) => state.title === "e2e-repo: notes.md",
+  );
+  check(
+    "prose is compared by words",
+    state.mode === "prose" && state.versions === 1,
+    state,
+  );
+
+  await repo.type("#file-filter", "MAIN");
+  state = await repoState();
+  check(
+    "the filter narrows the list, whatever the case",
+    state.files.join() === "src/main.rs",
+    state.files,
+  );
+
+  await openRepo("?e2e&file=src%2Fmain.rs");
+  state = await eventually(
+    "a link to a file opens it",
+    repoState,
+    (state) => state.versions === 3,
+  );
+  check(
+    "with that file marked",
+    state.current === "src/main.rs",
+    state.current,
+  );
+
+  await openRepo("?e2e&file=nonesuch.rs");
+  state = await eventually(
+    "a file with no history is reported",
+    repoState,
+    (state) => state.status.includes("no history for nonesuch.rs"),
+  );
+  check(
+    "nothing was fetched from anywhere but the command",
+    outside.length === 0,
+    outside,
+  );
+  await repo.close();
 } catch (error) {
   failures += 1;
   console.log(`FAILED: ${error.message}`);

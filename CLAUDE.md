@@ -74,13 +74,27 @@ files to one comparison mode and to the attribution algorithm as it stood when
 they were written. Re-attributing is cheap (40 ms natively for 500 revisions of
 a Wikipedia article); `--example replay` measures it.
 
-## Data sources (`crates/cli`)
+## The command (`crates/cli`)
 
-Sources that cannot run in a browser are subcommands of the `historyflow`
-binary, one module each, and produce a bundle, which the command writes as an
-archive (or as JSON, if the output is named `.json`). `git_file` shells out to
-`git` (`log --follow`, `cat-file --batch`); its tests build a real repository in
-a temporary directory.
+`historyflow [PATH]` serves the viewer on the loopback address and opens a
+browser; `PATH` is a git repository, a file in one, or a history file.
+
+- The viewer is inside the binary: `build.rs` embeds `build/release/dist` as it
+  is when the command is compiled (an empty list if it has not been built, in
+  which case the command says so when asked to serve). Always build with
+  `tools/build-cli.sh`, which builds the viewer first.
+- `serve::reply` is the whole server as a function from a request to a reply,
+  which is what the tests call; `serve::serve` wraps it in `tiny_http`. It
+  refuses any request whose `Host` is not this machine and port, so that a page
+  on another site cannot read the repository through the browser.
+- It serves `index.html` with a `historyflow-server` meta tag added. The page
+  asks `api/session` only when it finds that tag; on a plain host it never asks,
+  so nothing 404s. `api/history?path=` reads one file's history from git
+  (`git_file`) and returns it as an archive.
+- `git-file` and `convert` are the subcommands that write files. `git_file`
+  shells out to `git` (`log --follow`, `cat-file --batch`); tests build a real
+  repository in a temporary directory (`tests/common`), and `tools/e2e.sh`
+  builds one for the browser test of the command.
 
 ## The Wikipedia source
 
