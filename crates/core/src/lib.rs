@@ -18,14 +18,23 @@
 //!    and age, and [`History::links`] gives the runs of tokens shared by
 //!    two versions.
 //!
+//! 5. [`layout`] turns a history into the quads the renderer draws.
+//!
+//! A [`Bundle`] is the file a data source writes and the page reads: the
+//! source versions plus a title and a suggested [`Mode`].
+//!
 //! See `docs/research/history-flow.md` §7 for why attribution and
 //! alignment are both derived from token identity.
 
 mod attribute;
+mod bundle;
+mod layout;
 mod model;
 mod segment;
 
 pub use attribute::{Config, HistoryBuilder, Matching, Measure};
+pub use bundle::{Bundle, Mode};
+pub use layout::{Layout, Quad, Spacing, author_colors, layout};
 pub use model::{
     Author, AuthorId, History, Link, Run, SourceVersion, TokenId, Version, VersionIndex,
 };

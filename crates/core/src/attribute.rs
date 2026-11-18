@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 use std::hash::{DefaultHasher, Hash, Hasher};
+use std::ops::Range;
 
 use imara_diff::{Algorithm, Diff, Token};
 
@@ -46,6 +47,15 @@ pub struct Config {
     pub segmenter: Box<dyn Segmenter>,
     pub matching: Matching,
     pub measure: Measure,
+    /// Whether to discard weak matches from the atom-by-atom comparison:
+    /// a stretch of matching atoms no longer than the changes on either
+    /// side of it, and shorter than at least one of them. Rewritten prose always shares a few common words with what
+    /// it replaced ("the", "of", a full stop); without this they survive
+    /// as slivers of the old text scattered through the new, and draw as
+    /// hairline ribbons. This is the "semantic cleanup" of
+    /// diff-match-patch, tightened so that a kept word between two
+    /// single-word changes still counts as kept.
+    pub drop_weak_matches: bool,
 }
 
 impl Config {
@@ -56,6 +66,7 @@ impl Config {
             segmenter: Box::new(Prose),
             matching: Matching::Historical,
             measure: Measure::Chars,
+            drop_weak_matches: true,
         }
     }
 
@@ -67,6 +78,7 @@ impl Config {
             segmenter: Box::new(Sentences),
             matching: Matching::Historical,
             measure: Measure::Chars,
+            drop_weak_matches: false,
         }
     }
 
@@ -77,6 +89,7 @@ impl Config {
             segmenter: Box::new(Lines),
             matching: Matching::Pairwise,
             measure: Measure::Atoms,
+            drop_weak_matches: false,
         }
     }
 }
@@ -203,9 +216,13 @@ impl HistoryBuilder {
         // The hunks are the differing stretches; everything between them,
         // and after the last, is common to both and pairs off in order.
         let end = (old.len() as u32, new.len() as u32);
-        let hunks = self.diff.hunks().map(|h| (h.before, h.after));
+        let mut hunks: Vec<_> = self.diff.hunks().map(|h| (h.before, h.after)).collect();
+        if self.config.drop_weak_matches {
+            hunks = without_weak_matches(hunks);
+        }
+        hunks.push((end.0..end.0, end.1..end.1));
         let (mut i, mut j) = (0, 0);
-        for (before, after) in hunks.chain([(end.0..end.0, end.1..end.1)]) {
+        for (before, after) in hunks {
             while i < before.start as usize {
                 tokens[new[j]] = old[i];
                 i += 1;
@@ -280,6 +297,37 @@ impl HistoryBuilder {
         }
         true
     }
+}
+
+/// A differing stretch: a range of the old sequence and the range of the
+/// new sequence that replaced it.
+type Hunk = (Range<u32>, Range<u32>);
+
+/// Joins hunks across any match between them that is no longer than
+/// either and shorter than at least one: the match is given up and its
+/// atoms become part of the change. (So alternate words changed one at a
+/// time leave the words between them alone.)
+/// Joining makes a bigger hunk, which may in turn swallow the match
+/// before it.
+fn without_weak_matches(hunks: Vec<Hunk>) -> Vec<Hunk> {
+    let size = |hunk: &Hunk| hunk.0.len().max(hunk.1.len());
+    let mut kept: Vec<Hunk> = Vec::with_capacity(hunks.len());
+    for mut hunk in hunks {
+        while let Some(before) = kept.last() {
+            let matched = (hunk.0.start - before.0.end) as usize;
+            let (smaller, larger) = {
+                let (a, b) = (size(before), size(&hunk));
+                (a.min(b), a.max(b))
+            };
+            if matched > smaller || matched >= larger {
+                break;
+            }
+            hunk = (before.0.start..hunk.0.end, before.1.start..hunk.1.end);
+            kept.pop();
+        }
+        kept.push(hunk);
+    }
+    kept
 }
 
 #[derive(Clone, Copy)]
@@ -582,6 +630,46 @@ mod tests {
 #[cfg(test)]
 mod repeated_passage_tests {
     use super::*;
+
+    fn origins(config: Config, texts: &[&str]) -> Vec<u32> {
+        let mut builder = HistoryBuilder::new(config);
+        for text in texts {
+            builder.push(&SourceVersion {
+                text: text.to_string(),
+                ..Default::default()
+            });
+        }
+        let h = builder.finish();
+        h.versions()
+            .last()
+            .unwrap()
+            .tokens()
+            .map(|t| h.origin(t))
+            .collect()
+    }
+
+    #[test]
+    fn a_rewrite_does_not_keep_stray_common_words() {
+        // The replacement shares "the" and "of" with the original, each
+        // alone between longer changes.
+        let texts = [
+            "Water flows down the side of a mountain",
+            "Engineers measured the height of every bridge",
+        ];
+        assert_eq!(origins(Config::prose(), &texts), [1; 7]);
+        // Without the cleanup the two words stay attributed to version 0.
+        let config = Config {
+            drop_weak_matches: false,
+            ..Config::prose()
+        };
+        assert_eq!(origins(config, &texts), [1, 1, 0, 1, 0, 1, 1]);
+    }
+
+    #[test]
+    fn a_word_kept_between_two_single_word_changes_stays() {
+        let texts = ["the cat sat on the mat", "a cat lay on a mat"];
+        assert_eq!(origins(Config::prose(), &texts), [1, 0, 1, 0, 1, 0]);
+    }
 
     #[test]
     fn identical_passages_keep_their_order() {

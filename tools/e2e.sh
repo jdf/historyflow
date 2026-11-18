@@ -20,7 +20,10 @@ GOLDEN_DIR=tests/goldens/e2e
 
 # name|query — add a case per view/mode as the visualization grows.
 CASES=(
-  "placeholder|?no-ui"
+  "demo-author-version|?no-ui"
+  "demo-age-date|?no-ui&coloring=age&spacing=date"
+  "demo-sentences|?no-ui&mode=sentences"
+  "demo-ui|?e2e"
 )
 
 tools/build.sh release >/dev/null

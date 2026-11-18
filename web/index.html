@@ -4,10 +4,44 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>history flow</title>
+    <link rel="icon" href="data:," />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <canvas id="plot"></canvas>
+    <header>
+      <h1 id="title">history flow</h1>
+      <label
+        >color
+        <select id="coloring">
+          <option value="author">author</option>
+          <option value="age">text age</option>
+        </select>
+      </label>
+      <label
+        >spacing
+        <select id="spacing">
+          <option value="version">version</option>
+          <option value="date">date</option>
+        </select>
+      </label>
+      <label
+        >compare
+        <select id="mode">
+          <option value="lines">lines</option>
+          <option value="prose">words</option>
+          <option value="sentences">sentences (2004)</option>
+        </select>
+      </label>
+      <button id="open" type="button">Open bundle…</button>
+      <input id="file" type="file" accept=".json,application/json" hidden />
+    </header>
+    <main>
+      <aside>
+        <h2>authors</h2>
+        <ol id="authors"></ol>
+      </aside>
+      <canvas id="plot"></canvas>
+    </main>
     <footer id="status"></footer>
     <script src="build-info.js"></script>
     <script type="module" src="app.js"></script>

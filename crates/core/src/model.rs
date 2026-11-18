@@ -2,6 +2,8 @@
 
 use std::collections::HashMap;
 
+use serde::{Deserialize, Serialize};
+
 /// Position of a version in its history, oldest first.
 pub type VersionIndex = u32;
 
@@ -25,7 +27,8 @@ pub struct Author {
 
 /// One version of a document as a data source supplies it. Sources yield
 /// these oldest first.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
 pub struct SourceVersion {
     /// The source's own name for the version: a commit hash, a revision
     /// number.

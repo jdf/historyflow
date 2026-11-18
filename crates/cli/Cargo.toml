@@ -1,0 +1,21 @@
+[package]
+name = "historyflow-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "historyflow"
+path = "src/main.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+clap = { version = "4.6.8", features = ["derive"] }
+historyflow-core = { path = "../core" }
+serde_json = "1.0.154"
+
+[dev-dependencies]
+tempfile = "3.27.0"

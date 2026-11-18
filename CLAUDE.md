@@ -46,11 +46,30 @@ Presets: `Config::prose()`, `Config::sentences_2004()`, `Config::source_lines()`
 (lines + pairwise). `cargo run --release -p historyflow-core --example scale` is
 a rough performance check.
 
+`layout` turns a `History` into `Quad`s in normalised coordinates (x across
+versions, y down the document, every version top-aligned): one per stretch of
+same-origin text in each version's line, and one per such stretch in each link
+between consecutive versions. Colour is not in the geometry: a quad carries its
+author and its age, and the shader picks the colour, so changing the colouring
+never rebuilds anything.
+
+A `Bundle` is the JSON file a data source writes and the page reads: title,
+suggested `Mode`, and the `SourceVersion`s with full text.
+
+## Data sources (`crates/cli`)
+
+Sources that cannot run in a browser are subcommands of the `historyflow`
+binary, one module each, and write a bundle. `git_file` shells out to `git`
+(`log --follow`, `cat-file --batch`); its tests build a real repository in a
+temporary directory.
+
 ## Architecture rules
 
 - **`crates/core`** has no browser or GL dependency. All model, diff and layout
   logic goes here so it is testable with plain `cargo test`.
-- **`crates/web`** is the only crate that touches `web-sys`. Keep it thin.
+- **`crates/web`** is the only crate that touches `web-sys`. Keep it thin: `App`
+  holds the history and options, `renderer` draws quads as instances of a unit
+  square.
 - **`web/`** is deliberately vanilla JS with no bundler and no TypeScript.
   `tools/build.sh` copies it into `build/<profile>/dist` next to the
   wasm-bindgen output in `pkg/`.

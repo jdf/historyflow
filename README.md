@@ -6,16 +6,45 @@ WebAssembly, drawing with WebGL2, inside a plain HTML and JavaScript page.
 
 Research notes on the original are in `docs/research/`.
 
+## Viewing a file's history
+
+The page shows a _bundle_: one JSON file holding every version of a document,
+written by a data source. The first data source is one file in a git repository:
+
+```sh
+cargo run --release -p historyflow-cli -- git-file path/to/file.rs -o file.json
+```
+
+Then open the page (`./dev`) and drop `file.json` on it, or use **Open
+bundle…**. The file is followed across renames, and each commit that touched it
+is one version.
+
+| Option             | Effect                                                                                |
+| ------------------ | ------------------------------------------------------------------------------------- |
+| `--mode lines`     | Default. Whole lines, each version diffed against the one before, like `git blame`.   |
+| `--mode prose`     | Words, matched across the whole history, so moved and restored text keeps its author. |
+| `--mode sentences` | Sentences, as in the original history flow.                                           |
+| `--first-parent`   | Follow only the mainline; a merged branch appears as one version at its merge.        |
+| `--max-versions N` | Keep only the most recent N versions.                                                 |
+
+The mode is only the bundle's suggestion; the page's **compare** menu switches
+between them. Without `--first-parent`, commits come in `git log` order, which
+interleaves the two sides of a merge by date.
+
+With no bundle the page shows `web/samples/demo.json`, a synthetic wiki page
+written by `tools/make-sample.py`.
+
 ## Layout
 
-| Path          | Contents                                                             |
-| ------------- | -------------------------------------------------------------------- |
-| `crates/core` | Platform-independent model, diff and layout. Tested natively.        |
-| `crates/web`  | wasm-bindgen exports and the WebGL2 renderer.                        |
-| `web/`        | The page: HTML, CSS and vanilla JavaScript. No bundler.              |
-| `tools/`      | Build, dev-server and end-to-end test scripts.                       |
-| `tests/`      | Approved end-to-end screenshots (`goldens/e2e`).                     |
-| `build/`      | Generated: `build/<profile>/dist` is the servable site. Not tracked. |
+| Path          | Contents                                                              |
+| ------------- | --------------------------------------------------------------------- |
+| `crates/core` | Platform-independent model, attribution and layout. Tested natively.  |
+| `crates/cli`  | The `historyflow` command: data sources that run outside the browser. |
+| `crates/web`  | wasm-bindgen exports and the WebGL2 renderer.                         |
+| `web/`        | The page: HTML, CSS and vanilla JavaScript. No bundler.               |
+| `tools/`      | Build, dev-server and end-to-end test scripts.                        |
+| `tests/`      | Approved end-to-end screenshots (`goldens/e2e`).                      |
+| `build/`      | Generated: `build/<profile>/dist` is the servable site. Not tracked.  |
 
 ## Requirements
 
@@ -23,6 +52,7 @@ Research notes on the original are in `docs/research/`.
   `wasm32-unknown-unknown` target on first use.
 - Node.js and npm — for prettier, the browser test driver and `wasm-opt`.
 - Python 3 — the dev server.
+- `git` — read by the `git-file` data source, and used by its tests.
 - The site repository at `~/projects/mrfeinberg.com` and a logged-in `wrangler`
   — only for `./deploy`.
 
