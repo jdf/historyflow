@@ -60,11 +60,27 @@ pub fn root(directory: &Path) -> Result<PathBuf, Error> {
     Ok(PathBuf::from(top.trim_end()))
 }
 
-/// Every file git tracks in the working tree at `root`, as paths within
-/// it, in git's order.
+/// The files git tracks in the working tree at `root` that have a
+/// history worth reading as text, as paths within the tree, in git's
+/// order. Left out: what git takes to be binary, what is not a file
+/// (a symbolic link, a submodule), and anything whose name, or the name
+/// of a directory it is in, starts with a dot.
 pub fn files(root: &Path) -> Result<Vec<String>, Error> {
-    let listed = git(root, &["ls-files", "-z"])?;
-    Ok(listed.split_terminator('\0').map(str::to_string).collect())
+    // Each entry is "i/<what is committed> w/<in the tree> attr/<…>",
+    // a tab, and the path. What is committed is "-text" for binary
+    // content and empty for what is not a file.
+    let listed = git(root, &["ls-files", "--eol", "-z"])?;
+    Ok(listed
+        .split_terminator('\0')
+        .filter_map(|entry| entry.split_once('\t'))
+        .filter(|(kind, path)| {
+            let committed = kind.split_whitespace().next().unwrap_or("");
+            committed != "i/-text"
+                && committed != "i/"
+                && !path.split('/').any(|name| name.starts_with('.'))
+        })
+        .map(|(_, path)| path.to_string())
+        .collect())
 }
 
 /// Reads the history of the file at `path` within the working tree at

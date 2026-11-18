@@ -667,8 +667,10 @@ try {
     repo.evaluate(() => ({
       title: document.getElementById("title").textContent,
       status: document.getElementById("status").textContent,
-      files: [...document.querySelectorAll("#file-list li")].map(
-        (item) => item.title,
+      files: [...document.querySelectorAll("#file-list li")].map((item) =>
+        item.classList.contains("folder")
+          ? `${item.title}/ ${item.getAttribute("aria-expanded") === "true" ? "open" : "closed"}`
+          : item.title,
       ),
       current: document.querySelector("#file-list li.current")?.title ?? null,
       versions: window.__historyflow.summary()?.versions,
@@ -691,8 +693,8 @@ try {
   await openRepo("?e2e");
   let state = await repoState();
   check(
-    "the repository's files are listed",
-    state.files.join() === "notes.md,src/main.rs",
+    "the repository is listed, folders first and closed",
+    state.files.join() === "src/ closed,notes.md",
     state.files,
   );
   check(
@@ -705,6 +707,22 @@ try {
     state.status === "2 files. Choose one to see its history.",
     state.status,
   );
+
+  await repo.click('#file-list li.folder[title="src"]');
+  state = await repoState();
+  check(
+    "pressing a folder opens it",
+    state.files.join() === "src/ open,src/main.rs,notes.md",
+    state.files,
+  );
+  await repo.click('#file-list li.folder[title="src"]');
+  state = await repoState();
+  check(
+    "and pressing it again closes it",
+    state.files.join() === "src/ closed,notes.md",
+    state.files,
+  );
+  await repo.click('#file-list li.folder[title="src"]');
 
   await repo.click('#file-list li[title="src/main.rs"]');
   state = await eventually(
@@ -754,8 +772,8 @@ try {
   await repo.type("#file-filter", "MAIN");
   state = await repoState();
   check(
-    "the filter narrows the list, whatever the case",
-    state.files.join() === "src/main.rs",
+    "the filter narrows the list, whatever the case, opening what matches",
+    state.files.join() === "src/ open,src/main.rs",
     state.files,
   );
 
@@ -766,9 +784,10 @@ try {
     (state) => state.versions === 3,
   );
   check(
-    "with that file marked",
-    state.current === "src/main.rs",
-    state.current,
+    "with that file marked, its folder open",
+    state.current === "src/main.rs" &&
+      state.files.join() === "src/ open,src/main.rs,notes.md",
+    state,
   );
 
   await openRepo("?e2e&file=nonesuch.rs");

@@ -21,10 +21,13 @@ historyflow saved.hflow            # a history file
 ```
 
 Each opens your browser on the viewer. For a repository the page lists its
-tracked files, with a filter; choosing one reads that file's history from git
-there and then. The file is followed across renames, and each commit that
-touched it is one version. Markdown and other prose is compared by words, and
-everything else by lines; the **compare** menu changes it.
+tracked files as a tree, folders first and closed until pressed, with a filter
+that opens whatever matches. Binary files are left out, as is anything whose
+name, or a folder's above it, starts with a dot; name one on the command line to
+see it anyway. Choosing a file reads its history from git there and then. The
+file is followed across renames, and each commit that touched it is one version.
+Markdown and other prose is compared by words, and everything else by lines; the
+**compare** menu changes it.
 
 `--no-open` prints the address without opening a browser, `--port` picks the
 port, and `--first-parent` follows only the mainline of merges. The server

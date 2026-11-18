@@ -459,46 +459,131 @@ let session = null;
 let repoFile = null;
 // No list this long is usable, or quick to build; filtering narrows it.
 const MOST_FILES_LISTED = 500;
+// The folders standing open, by path. All start closed.
+const openFolders = new Set();
+// While a filter is in force every folder with a match in it is shown
+// open; these are the ones closed by hand since the filter last changed.
+const closedInFilter = new Set();
+
+const CHEVRON =
+  '<svg class="chevron" viewBox="0 0 10 10" aria-hidden="true">' +
+  '<path d="M3 1.5 7 5 3 8.5" /></svg>';
+const FOLDER =
+  '<svg class="icon" viewBox="0 0 16 16" aria-hidden="true">' +
+  '<path d="M1.5 3.5h4.2l1.6 1.8h7.2v7.7h-13z" /></svg>';
+
+const byName = new Intl.Collator(undefined, {
+  numeric: true,
+  sensitivity: "base",
+});
+
+// The files as a tree: { folders: Map(name → tree), files: [name] }, each
+// in the order shown, folders before files.
+function fileTree(paths) {
+  const root = { folders: new Map(), files: [] };
+  for (const path of paths) {
+    const names = path.split("/");
+    const file = names.pop();
+    let tree = root;
+    for (const name of names) {
+      if (!tree.folders.has(name)) {
+        tree.folders.set(name, { folders: new Map(), files: [] });
+      }
+      tree = tree.folders.get(name);
+    }
+    tree.files.push(file);
+  }
+  const sort = (tree) => {
+    tree.folders = new Map(
+      [...tree.folders].sort(([a], [b]) => byName.compare(a, b)),
+    );
+    tree.files.sort(byName.compare);
+    tree.folders.forEach(sort);
+  };
+  sort(root);
+  return root;
+}
 
 function showFiles() {
   const wanted = $("file-filter").value.toLowerCase();
-  const matches = session.files.filter((path) =>
-    path.toLowerCase().includes(wanted),
-  );
-  const items = matches.slice(0, MOST_FILES_LISTED).map((path) => {
+  const filtering = wanted !== "";
+  const matches = filtering
+    ? session.files.filter((path) => path.toLowerCase().includes(wanted))
+    : session.files;
+  const rows = [];
+  const row = (kind, path, name, depth) => {
     const item = document.createElement("li");
-    // The directory dim, the name bright. The item clips a long path at
-    // its start by being right-to-left; the <bdi> holds the path itself
-    // left to right inside it.
-    const cut = path.lastIndexOf("/") + 1;
-    const whole = document.createElement("bdi");
-    const name = document.createElement("span");
-    name.className = "name";
-    name.textContent = path.slice(cut);
-    whole.append(path.slice(0, cut), name);
-    item.append(whole);
+    item.className = kind;
     item.title = path;
-    item.classList.toggle("current", path === repoFile);
-    item.onclick = () => openRepoFile(path);
+    item.dataset.path = path;
+    item.style.paddingLeft = `${4 + depth * 12}px`;
+    const label = document.createElement("span");
+    label.className = "name";
+    label.textContent = name;
+    if (kind === "folder") item.innerHTML = CHEVRON + FOLDER;
+    item.append(label);
+    rows.push(item);
     return item;
-  });
-  if (matches.length > MOST_FILES_LISTED) {
+  };
+  const list = (tree, prefix, depth) => {
+    for (const [name, folder] of tree.folders) {
+      const path = prefix + name;
+      const open = filtering
+        ? !closedInFilter.has(path)
+        : openFolders.has(path);
+      const item = row("folder", path, name, depth);
+      item.setAttribute("aria-expanded", open);
+      item.onclick = () => {
+        const set = filtering ? closedInFilter : openFolders;
+        // In one set membership means open, in the other closed.
+        if (open === filtering) set.add(path);
+        else set.delete(path);
+        showFiles();
+      };
+      if (open) list(folder, `${path}/`, depth + 1);
+    }
+    for (const name of tree.files) {
+      const path = prefix + name;
+      const item = row("file", path, name, depth);
+      item.classList.toggle("current", path === repoFile);
+      item.onclick = () => openRepoFile(path);
+    }
+  };
+  list(fileTree(matches), "", 0);
+  const shown = rows.slice(0, MOST_FILES_LISTED);
+  if (rows.length > MOST_FILES_LISTED) {
     const more = document.createElement("li");
     more.className = "more";
-    more.textContent = `…and ${matches.length - MOST_FILES_LISTED} more; filter to narrow`;
-    items.push(more);
+    more.textContent = `…and ${rows.length - MOST_FILES_LISTED} more; filter to narrow`;
+    shown.push(more);
+  } else if (rows.length === 0) {
+    const none = document.createElement("li");
+    none.className = "more";
+    none.textContent = filtering ? "No file matches." : "No text files.";
+    shown.push(none);
   }
-  $("file-list").replaceChildren(...items);
-  $("file-list")
-    .querySelector(".current")
-    ?.scrollIntoView({ block: "nearest" });
+  $("file-list").replaceChildren(...shown);
+}
+
+// Opens the folders a file is in, so that it is in the list.
+function revealFile(path) {
+  const names = path.split("/").slice(0, -1);
+  names.forEach((_, i) => {
+    const folder = names.slice(0, i + 1).join("/");
+    openFolders.add(folder);
+    closedInFilter.delete(folder);
+  });
 }
 
 // Shows the history of one of the repository's files, which the server
 // reads from git as it is asked.
 async function openRepoFile(path) {
   repoFile = path;
+  revealFile(path);
   showFiles();
+  $("file-list")
+    .querySelector(".current")
+    ?.scrollIntoView({ block: "nearest" });
   history.replaceState(null, "", `?file=${encodeURIComponent(path)}`);
   status.textContent = `Reading the history of ${path}…`;
   try {
@@ -526,7 +611,10 @@ async function startSession(address) {
     return;
   }
   $("files").hidden = false;
-  $("file-filter").oninput = showFiles;
+  $("file-filter").oninput = () => {
+    closedInFilter.clear();
+    showFiles();
+  };
   showFiles();
   const first = params.get("file") ?? session.open;
   if (first) {

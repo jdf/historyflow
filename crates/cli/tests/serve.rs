@@ -46,6 +46,35 @@ fn the_session_lists_the_repository_and_its_files() {
 }
 
 #[test]
+fn only_text_that_is_not_hidden_is_listed() {
+    let dir = repository();
+    let repo_path = dir.path();
+    std::fs::write(
+        repo_path.join("picture.png"),
+        b"\x89PNG\r\n\x1a\n\0\0\0\rIHDR",
+    )
+    .unwrap();
+    std::fs::write(repo_path.join(".gitignore"), "target\n").unwrap();
+    std::fs::create_dir(repo_path.join(".github")).unwrap();
+    std::fs::write(repo_path.join(".github/ci.yml"), "on: push\n").unwrap();
+    std::fs::write(repo_path.join("src/.hidden"), "secret\n").unwrap();
+    std::fs::write(repo_path.join("empty.txt"), "").unwrap();
+    #[cfg(unix)]
+    std::os::unix::fs::symlink("other.txt", repo_path.join("link.txt")).unwrap();
+    common::commit(repo_path, "ada", 5000, "Add what should not be listed");
+
+    let subject = repo(&dir);
+    let session: serde_json::Value =
+        serde_json::from_slice(&get(&subject, "/api/session").body).unwrap();
+    assert_eq!(
+        session["files"],
+        serde_json::json!(["empty.txt", "other.txt", "src/b.txt"])
+    );
+    // Left out of the list, but still there to be asked for.
+    assert_eq!(get(&subject, "/api/history?path=.gitignore").status, 200);
+}
+
+#[test]
 fn a_file_named_on_the_command_line_is_the_one_to_open() {
     let dir = repository();
     let subject = Subject::at(&dir.path().join("src/b.txt"), false).unwrap();

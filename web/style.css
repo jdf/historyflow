@@ -94,18 +94,45 @@ aside:has(#files:not([hidden])) {
   list-style: none;
 }
 #file-list li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   padding: 1px 4px;
   border-radius: 2px;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  /* Clip a long path at its start: the file's name is the end. */
-  direction: rtl;
-  text-align: left;
   cursor: pointer;
 }
 #file-list li .name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: #ddd;
+}
+/* A file's name lines up with a folder's icon, past its chevron. */
+#file-list li.file .name {
+  margin-left: 14px;
+}
+#file-list svg {
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+#file-list .chevron {
+  width: 10px;
+  height: 10px;
+  stroke-width: 1.5;
+}
+#file-list li[aria-expanded="true"] .chevron {
+  transform: rotate(90deg);
+}
+#file-list .icon {
+  width: 14px;
+  height: 14px;
+  stroke-width: 1.2;
+  fill: #555;
+  stroke: #999;
 }
 #file-list li:hover {
   background: #222;
@@ -114,7 +141,6 @@ aside:has(#files:not([hidden])) {
   background: #333;
 }
 #file-list li.more {
-  direction: ltr;
   cursor: default;
   font-style: italic;
 }
