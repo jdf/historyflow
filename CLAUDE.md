@@ -100,9 +100,13 @@ browser; `PATH` is a git repository, a file in one, or a history file.
 
 `tools/release.sh <version>` tags this repository and dispatches `release.yml`
 in the public `jdf/historyflow-cli` (cloned at `~/projects/historyflow-cli`),
-which builds from here with a read-only deploy key and publishes the release and
-`Formula/historyflow.rb` there. Publishing is outward-facing: never run it
-unless asked.
+which builds from here with a read-only deploy key and publishes the release
+there. It waits for that build, then dispatches `update.yml` in the public tap,
+`jdf/homebrew-historyflow` (cloned at `~/projects/homebrew-historyflow`), which
+writes `Formula/historyflow.rb` from the release's checksums with no credential
+of ours. The tap is a separate repository only for its name: `homebrew-…` is
+what lets `brew install jdf/historyflow/historyflow` work with no `brew tap` or
+`brew trust`. Publishing is outward-facing: never run it unless asked.
 
 ## The Wikipedia source
 

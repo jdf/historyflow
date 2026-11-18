@@ -201,7 +201,9 @@ pixel comparison.
 
 The command is distributed from a separate, public repository,
 [jdf/historyflow-cli](https://github.com/jdf/historyflow-cli): GitHub releases
-with a binary per platform, and a Homebrew formula. To release, set the version
+with a binary per platform. The Homebrew formula is in a third,
+[jdf/homebrew-historyflow](https://github.com/jdf/homebrew-historyflow), so that
+`brew install jdf/historyflow/historyflow` finds it. To release, set the version
 in `Cargo.toml`, commit and push, then:
 
 ```sh
@@ -211,7 +213,9 @@ tools/release.sh 0.2.0
 That tags this repository and starts the release workflow in the public one,
 which checks this repository out with a read-only deploy key
 (`SOURCE_DEPLOY_KEY` there), builds for macOS (Apple silicon and Intel) and
-Linux (x86-64, static), publishes the release and rewrites the formula.
+Linux (x86-64, static), and publishes the release. The script waits for that,
+then starts the tap's own workflow, which rewrites the formula from the
+release's checksums.
 
 ## Deployment
 
