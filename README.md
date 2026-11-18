@@ -18,6 +18,7 @@ historyflow                        # browse the git repository you are in
 historyflow path/to/repo           # or another one
 historyflow src/main.rs            # a repository, opened on one file
 historyflow saved.hflow            # a history file
+historyflow --wikipedia https://en.wikipedia.org/wiki/Chocolate
 ```
 
 Each opens your browser on the viewer. For a repository the page lists its
@@ -28,6 +29,12 @@ see it anyway. Choosing a file reads its history from git there and then. The
 file is followed across renames, and each commit that touched it is one version.
 Markdown and other prose is compared by words, and everything else by lines; the
 **compare** menu changes it.
+
+`--wikipedia` takes an article's address on any Wikipedia, or just its title on
+the English one, and shows its first 500 revisions; `--revisions N` asks for
+more or fewer. This is the one case where something is fetched: your browser
+asks the wiki for the history, as described under
+[Viewing a Wikipedia article's history](#viewing-a-wikipedia-articles-history).
 
 `--no-open` prints the address without opening a browser, `--port` picks the
 port, and `--first-parent` follows only the mainline of merges. The server
@@ -81,6 +88,10 @@ Two menus set the vertical scale, independently of each other:
 - **scale** is _linear_ or _log_. On the log scale the start of the document is
   drawn nearly in proportion and the rest progressively squeezed, so a version
   many times the usual length takes only a few times the usual height.
+
+The **color**, **spacing**, **height** and **scale** menus are remembered in
+your browser, and start as you left them. **compare** is not: each file suggests
+its own.
 
 With no file the page shows `web/samples/demo.hflow`, a synthetic wiki page
 written by `tools/make-sample.py`.

@@ -110,13 +110,20 @@ commit ada 1000172800 "Drop one, define two"
 lsof -ti :"$COMMAND_PORT" -sTCP:LISTEN 2>/dev/null | xargs kill 2>/dev/null || true
 target/release/historyflow "$REPO" --no-open --port "$COMMAND_PORT" 2>/dev/null &
 COMMAND_PID=$!
-trap 'kill $SERVER_PID $COMMAND_PID 2>/dev/null' EXIT
-for _ in $(seq 1 50); do
-  curl -sf -o /dev/null "http://127.0.0.1:$COMMAND_PORT/" && break
-  sleep 0.1
+# And the command on a Wikipedia article, which the test answers for.
+WIKI_PORT=8794
+lsof -ti :"$WIKI_PORT" -sTCP:LISTEN 2>/dev/null | xargs kill 2>/dev/null || true
+target/release/historyflow --wikipedia Chocolate --revisions 3 --no-open --port "$WIKI_PORT" 2>/dev/null &
+WIKI_PID=$!
+trap 'kill $SERVER_PID $COMMAND_PID $WIKI_PID 2>/dev/null' EXIT
+for port in "$COMMAND_PORT" "$WIKI_PORT"; do
+  for _ in $(seq 1 50); do
+    curl -sf -o /dev/null "http://127.0.0.1:$port/" && break
+    sleep 0.1
+  done
 done
 
-if node tools/e2e-ui.mjs "$CHROME" "http://localhost:$PORT/" "http://127.0.0.1:$COMMAND_PORT/"; then
+if node tools/e2e-ui.mjs "$CHROME" "http://localhost:$PORT/" "http://127.0.0.1:$COMMAND_PORT/" "http://127.0.0.1:$WIKI_PORT/"; then
   echo "e2e ui OK"
 else
   FAILED=1

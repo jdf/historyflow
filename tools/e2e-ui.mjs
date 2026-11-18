@@ -8,7 +8,7 @@
 // historyflow command serving the small repository tools/e2e.sh makes.
 import puppeteer from "puppeteer-core";
 
-const [chrome, baseUrl, commandUrl] = process.argv.slice(2);
+const [chrome, baseUrl, commandUrl, commandWikiUrl] = process.argv.slice(2);
 
 const args = ["--use-angle=swiftshader", "--hide-scrollbars"];
 if (process.env.CI) args.push("--no-sandbox");
@@ -494,7 +494,7 @@ try {
   ];
   // Opens the page with fetch replaced for the wiki's API, answering the
   // nth request with the nth of `answers`.
-  const openWiki = async (query, answers) => {
+  const openWiki = async (query, answers, base = baseUrl) => {
     const wiki = await browser.newPage();
     await wiki.setViewport({ width: 1200, height: 750, deviceScaleFactor: 1 });
     await wiki.evaluateOnNewDocument((answers) => {
@@ -511,7 +511,7 @@ try {
         return new Response(JSON.stringify(answer), { status: 200 });
       };
     }, answers);
-    await wiki.goto(baseUrl + query, { waitUntil: "load" });
+    await wiki.goto(base + query, { waitUntil: "load" });
     const deadline = Date.now() + 30000;
     const settled =
       "window.__historyflowReady === true && !window.__historyflow.loading()";
@@ -654,6 +654,80 @@ try {
     said,
   );
   await wiki.close();
+
+  // The command given --wikipedia Chocolate --revisions 3 serves the
+  // same page, told which article to fetch and how much of it.
+  wiki = await openWiki("?e2e", batches, commandWikiUrl);
+  loaded = await wiki.evaluate("window.__historyflow.summary()");
+  requests = await wiki.evaluate("window.__wikiRequests");
+  check(
+    "the command's article is fetched, as many revisions as it said",
+    loaded.title === "Chocolate" && loaded.versions === 3,
+    loaded,
+  );
+  check(
+    "asking the wiki for no more than that",
+    requests.length === 1 && requests[0].url.includes("rvlimit=3"),
+    requests,
+  );
+  check(
+    "with no list of files",
+    await wiki.evaluate("document.getElementById('files').hidden"),
+  );
+  await wiki.close();
+
+  // --- The menus are remembered from one visit to the next. Without
+  // ?e2e, which is what keeps every other test here from remembering.
+  const menus = () =>
+    page.evaluate(() =>
+      ["coloring", "spacing", "height", "scale"]
+        .map((name) => document.getElementById(name).value)
+        .join(),
+    );
+  const visit = async (query) => {
+    await page.goto(baseUrl + query, { waitUntil: "load" });
+    await eventually(
+      `${query || "the page"} loads`,
+      () => page.evaluate("window.__historyflowReady === true"),
+      Boolean,
+    );
+  };
+  await visit("");
+  check(
+    "the menus start at their defaults",
+    (await menus()) === "author,version,view,linear",
+    await menus(),
+  );
+  await page.select("#coloring", "age");
+  await page.select("#spacing", "date");
+  await page.select("#height", "all");
+  await page.select("#scale", "log");
+  await visit("");
+  check(
+    "and come back as they were left",
+    (await menus()) === "age,date,all,log",
+    await menus(),
+  );
+  await visit("?scale=linear&coloring=nonesuch");
+  check(
+    "a link's setting wins, and one that is no choice is ignored",
+    (await menus()) === "age,date,all,linear",
+    await menus(),
+  );
+  await visit("");
+  check(
+    "without replacing what is remembered",
+    (await menus()) === "age,date,all,log",
+    await menus(),
+  );
+  await visit("?e2e");
+  check(
+    "a test's page remembers nothing",
+    (await menus()) === "author,version,view,linear",
+    await menus(),
+  );
+  await page.evaluate(() => localStorage.clear());
+
   // --- The historyflow command: the same page, served with a repository
   // to browse. Any file's history is read from git when it is chosen.
   const repo = await browser.newPage();

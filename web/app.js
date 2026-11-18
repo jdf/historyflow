@@ -22,7 +22,13 @@
 //   view      start,width — the part of the history on screen, in
 //             fractions of the whole (default: all of it)
 //   no-ui     hide everything but the plot (used by the e2e screenshots)
-//   e2e       leave the build id out of the status line
+//   e2e       leave the build id out of the status line, and neither use
+//             nor keep remembered settings
+//
+// The color, spacing, height and scale menus are remembered in this
+// browser (localStorage) when changed, and start as they were left; a
+// parameter above overrides what is remembered without replacing it.
+// What to compare by is not remembered: each file suggests its own.
 import init, {
   App,
   version,
@@ -44,6 +50,30 @@ const controls = {
   scale: $("scale"),
   mode: $("mode"),
 };
+
+// The menus whose settings are remembered from one visit to the next.
+const REMEMBERED = ["coloring", "spacing", "height", "scale"];
+const remembering = !params.has("e2e");
+
+// Storage can be unavailable or full (a private window, blocked site
+// data); the page then works without remembering.
+function remembered(name) {
+  if (!remembering) return null;
+  try {
+    return localStorage.getItem(`historyflow.${name}`);
+  } catch {
+    return null;
+  }
+}
+
+function remember(name) {
+  if (!remembering) return;
+  try {
+    localStorage.setItem(`historyflow.${name}`, controls[name].value);
+  } catch {
+    // Not remembered, then.
+  }
+}
 
 let app;
 // The fetch of a Wikipedia history that is under way, if one is; setting
@@ -453,7 +483,7 @@ function report(error) {
 // --- A repository, served by the historyflow command ----------------------
 
 // What the command's server said it is showing, or null on a plain web
-// host: { repository, files, open, history }.
+// host: { repository, files, open, history, wikipedia }.
 let session = null;
 // The file of the repository being shown.
 let repoFile = null;
@@ -610,6 +640,11 @@ async function startSession(address) {
     load(new Uint8Array(await history.arrayBuffer()), "", []);
     return;
   }
+  if (session.wikipedia) {
+    // Not awaited: the history shows as it arrives.
+    loadWikipedia(session.wikipedia.article, session.wikipedia.revisions);
+    return;
+  }
   $("files").hidden = false;
   $("file-filter").oninput = () => {
     closedInFilter.clear();
@@ -637,8 +672,12 @@ async function readFile(file) {
 try {
   await init();
   app = new App(canvas);
-  for (const name of ["coloring", "spacing", "height", "scale"]) {
-    if (params.has(name)) controls[name].value = params.get(name);
+  for (const name of REMEMBERED) {
+    // Anything but one of the menu's own choices would leave it blank.
+    const known = (value) =>
+      [...controls[name].options].some((option) => option.value === value);
+    const wanted = [params.get(name), remembered(name)].find(known);
+    if (wanted) controls[name].value = wanted;
   }
   app.set_coloring(controls.coloring.value);
   app.set_spacing(controls.spacing.value);
@@ -670,19 +709,23 @@ try {
 
   controls.coloring.onchange = () => {
     app.set_coloring(controls.coloring.value);
+    remember("coloring");
     detail = null;
     select(cursor.version, cursor.y);
   };
   controls.spacing.onchange = () => {
     app.set_spacing(controls.spacing.value);
+    remember("spacing");
     draw();
   };
   controls.height.onchange = () => {
     app.set_height(controls.height.value);
+    remember("height");
     draw();
   };
   controls.scale.onchange = () => {
     app.set_scale(controls.scale.value);
+    remember("scale");
     draw();
   };
   controls.mode.onchange = () => {

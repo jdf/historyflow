@@ -78,6 +78,9 @@ a Wikipedia article); `--example replay` measures it.
 
 `historyflow [PATH]` serves the viewer on the loopback address and opens a
 browser; `PATH` is a git repository, a file in one, or a history file.
+`historyflow --wikipedia ARTICLE [--revisions N]` serves it on a Wikipedia
+article instead: the command fetches nothing itself, and only tells the page (in
+`api/session`) which article to fetch and how much of it.
 
 - The viewer is inside the binary: `build.rs` embeds `build/release/dist` as it
   is when the command is compiled (an empty list if it has not been built, in

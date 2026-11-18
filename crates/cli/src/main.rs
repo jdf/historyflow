@@ -15,6 +15,9 @@ use historyflow_core::{Archive, Mode};
 /// a history file. Everything is served from this machine; nothing is
 /// fetched from anywhere else.
 ///
+/// With --wikipedia, opens the viewer on an article's history instead,
+/// which your browser fetches from the wiki.
+///
 /// History files are written as archives (.hflow), which hold only what
 /// each version changed, unless the name given ends in .json: then as a
 /// bundle, plain JSON with every version's text written out.
@@ -22,8 +25,17 @@ use historyflow_core::{Archive, Mode};
 #[command(name = "historyflow", version, args_conflicts_with_subcommands = true)]
 struct Cli {
     /// A git repository, a file in one, or a history file.
-    #[arg(default_value = ".")]
+    #[arg(default_value = ".", conflicts_with = "wikipedia")]
     path: PathBuf,
+    /// Show a Wikipedia article's history: its address
+    /// (https://de.wikipedia.org/wiki/Schokolade), or just its title on
+    /// the English Wikipedia.
+    #[arg(long, value_name = "ARTICLE")]
+    wikipedia: Option<String>,
+    /// With --wikipedia: how many revisions to fetch, from the
+    /// article's first.
+    #[arg(long, value_name = "N", default_value_t = 500, requires = "wikipedia")]
+    revisions: u32,
     /// The port to serve on; another is chosen if it is taken.
     #[arg(long, default_value_t = 8793)]
     port: u16,
@@ -91,7 +103,10 @@ fn main() -> ExitCode {
 
 fn run(cli: Cli) -> Result<(), Error> {
     let Some(command) = cli.command else {
-        let subject = Subject::at(&cli.path, cli.first_parent)?;
+        let subject = match &cli.wikipedia {
+            Some(article) => Subject::wikipedia(article, cli.revisions)?,
+            None => Subject::at(&cli.path, cli.first_parent)?,
+        };
         return serve::serve(&subject, cli.port, |address| {
             eprintln!("history flow is at {address} — press Ctrl-C to stop");
             if !cli.no_open {

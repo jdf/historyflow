@@ -1,6 +1,8 @@
 //! Serves the viewer on this machine, with nothing fetched from anywhere
 //! else: the page and its WebAssembly are part of the command, and what
 //! the page shows comes from a git repository or a history file here.
+//! The one exception is asked for by name: a Wikipedia article, whose
+//! history the page then fetches from the wiki itself.
 //!
 //! The page learns what it is looking at from `api/session`, and asks
 //! for one file's history at a time from `api/history?path=…`, which is
@@ -8,7 +10,7 @@
 
 use std::path::{Path, PathBuf};
 
-use historyflow_core::{Archive, Mode};
+use historyflow_core::{Archive, Mode, wikipedia};
 use serde::Serialize;
 use tiny_http::{Header, Method, Request, Server};
 
@@ -31,6 +33,13 @@ pub enum Subject {
     },
     /// One history, already read: the bytes of its archive.
     History(Vec<u8>),
+    /// A Wikipedia article, for the page to fetch from the wiki.
+    Wikipedia {
+        /// Its title or address, as given.
+        article: String,
+        /// How many revisions to fetch, from the first.
+        revisions: u32,
+    },
 }
 
 impl Subject {
@@ -57,6 +66,25 @@ impl Subject {
             first_parent,
         })
     }
+
+    /// A Wikipedia article, by title or address, and how many of its
+    /// revisions to fetch.
+    pub fn wikipedia(article: &str, revisions: u32) -> Result<Subject, Error> {
+        if wikipedia::Article::parse(article).is_none() {
+            return Err(format!(
+                "{article} is not an article's title, or its address on a Wikipedia \
+                 (https://en.wikipedia.org/wiki/Chocolate)"
+            )
+            .into());
+        }
+        if revisions == 0 {
+            return Err("there is nothing to show in no revisions".into());
+        }
+        Ok(Subject::Wikipedia {
+            article: article.to_string(),
+            revisions,
+        })
+    }
 }
 
 /// What `api/session` tells the page.
@@ -70,6 +98,14 @@ struct Session<'a> {
     open: Option<&'a str>,
     /// Where to fetch the one history from, when looking at one.
     history: Option<&'a str>,
+    /// The Wikipedia article to fetch, when looking at one.
+    wikipedia: Option<Wikipedia<'a>>,
+}
+
+#[derive(Serialize)]
+struct Wikipedia<'a> {
+    article: &'a str,
+    revisions: u32,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -135,6 +171,7 @@ fn session(subject: &Subject) -> Reply {
                 files,
                 open: open.as_deref(),
                 history: None,
+                wikipedia: None,
             },
             Err(error) => return Reply::error(500, error),
         },
@@ -143,6 +180,17 @@ fn session(subject: &Subject) -> Reply {
             files: Vec::new(),
             open: None,
             history: Some("api/history"),
+            wikipedia: None,
+        },
+        Subject::Wikipedia { article, revisions } => Session {
+            repository: None,
+            files: Vec::new(),
+            open: None,
+            history: None,
+            wikipedia: Some(Wikipedia {
+                article,
+                revisions: *revisions,
+            }),
         },
     };
     let json = serde_json::to_vec(&session).expect("serializable");
@@ -153,6 +201,9 @@ fn history(subject: &Subject, query: &str) -> Reply {
     let archive = match subject {
         Subject::History(archive) => {
             return Reply::ok("application/octet-stream", archive.clone());
+        }
+        Subject::Wikipedia { .. } => {
+            return Reply::error(404, "the page fetches this history from the wiki");
         }
         Subject::Repository {
             root, first_parent, ..
