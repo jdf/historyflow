@@ -18,6 +18,13 @@ fn start() {
     console_error_panic_hook::set_once();
 }
 
+/// How to name this tool in a request to a wiki, with how to reach
+/// whoever is running it if that is known (else empty).
+#[wasm_bindgen]
+pub fn wikipedia_user_agent(contact: &str) -> String {
+    wikipedia::user_agent(contact)
+}
+
 /// The core crate's version.
 #[wasm_bindgen]
 pub fn version() -> String {

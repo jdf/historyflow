@@ -33,6 +33,7 @@ import init, {
   App,
   version,
   wikipedia_request,
+  wikipedia_user_agent,
 } from "./pkg/historyflow_web.js";
 
 const params = new URLSearchParams(location.search);
@@ -421,7 +422,12 @@ async function fetchWikipedia(url, job) {
     // Wikimedia asks tools to say who they are; a page cannot set
     // User-Agent, so it reads this header instead.
     const response = await fetch(url, {
-      headers: { "Api-User-Agent": `historyflow/${version()}` },
+      headers: {
+        // The command passes on the contact its user configured.
+        "Api-User-Agent": wikipedia_user_agent(
+          session?.wikipedia?.contact ?? "",
+        ),
+      },
     });
     if (response.ok) return response.text();
     if (response.status !== 429 || attempt === 4 || job.stopped) {
@@ -443,9 +449,16 @@ async function loadWikipedia(article, limit) {
     app.begin(article, "prose");
     showLoaded(JSON.parse(app.summary()), []);
     let next = "";
+    let slow = false;
     while (!job.stopped && summary.versions < limit) {
       const url = wikipedia_request(article, next, limit - summary.versions);
+      // Wikimedia asks that a request it took over a second to answer be
+      // followed by five seconds' rest.
+      if (slow) await new Promise((resolve) => setTimeout(resolve, 5000));
+      if (job.stopped) break;
+      const asked = performance.now();
       const response = await fetchWikipedia(url, job);
+      slow = performance.now() - asked > 1000;
       if (job.stopped) break;
       const following = cursor.version >= summary.versions - 1;
       next = app.add_wikipedia(response);

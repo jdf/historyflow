@@ -77,24 +77,24 @@ fn only_text_that_is_not_hidden_is_listed() {
 #[test]
 fn a_wikipedia_article_is_left_to_the_page_to_fetch() {
     let address = "https://de.wikipedia.org/wiki/Schokolade";
-    let subject = Subject::wikipedia(address, 120).unwrap();
+    let subject = Subject::wikipedia(address, 120, "ada@example.com").unwrap();
     let session: serde_json::Value =
         serde_json::from_slice(&get(&subject, "/api/session").body).unwrap();
     assert_eq!(
         session["wikipedia"],
-        serde_json::json!({ "article": address, "revisions": 120 })
+        serde_json::json!({ "article": address, "revisions": 120, "contact": "ada@example.com" })
     );
     assert!(session["repository"].is_null() && session["history"].is_null());
     assert_eq!(get(&subject, "/api/history").status, 404);
 
-    assert!(Subject::wikipedia("Chocolate", 500).is_ok());
+    assert!(Subject::wikipedia("Chocolate", 500, "ada").is_ok());
     for (article, revisions) in [
         ("https://example.com/Chocolate", 500),
         ("", 500),
         ("Chocolate", 0),
     ] {
         assert!(
-            Subject::wikipedia(article, revisions).is_err(),
+            Subject::wikipedia(article, revisions, "ada").is_err(),
             "{article} {revisions}"
         );
     }

@@ -559,7 +559,7 @@ try {
   );
   check(
     "requests say who is asking",
-    /^historyflow\//.test(requests[0].headers["Api-User-Agent"]),
+    /^historyflow\/[\d.]+$/.test(requests[0].headers["Api-User-Agent"]),
     requests[0].headers,
   );
   check(
@@ -669,6 +669,13 @@ try {
     "asking the wiki for no more than that",
     requests.length === 1 && requests[0].url.includes("rvlimit=3"),
     requests,
+  );
+  check(
+    "saying how to reach whoever ran the command",
+    /^historyflow\/[\d.]+ \(e2e@example\.com\)$/.test(
+      requests[0].headers["Api-User-Agent"],
+    ),
+    requests[0].headers,
   );
   check(
     "with no list of files",

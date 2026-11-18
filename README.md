@@ -36,6 +36,19 @@ more or fewer. This is the one case where something is fetched: your browser
 asks the wiki for the history, as described under
 [Viewing a Wikipedia article's history](#viewing-a-wikipedia-articles-history).
 
+Wikipedia asks every tool to say how to reach whoever is running it, so before
+the first fetch tell historyflow how to reach you, as you once told git your
+name: an email address, a website, or your user name on a wiki.
+
+```sh
+git config --global historyflow.contact you@example.com
+```
+
+It is kept in git's configuration, sent to the wiki with each request (as
+`historyflow/0.1.1 (you@example.com)`), and goes nowhere else. `--contact` gives
+it for one run, and the `HISTORYFLOW_CONTACT` environment variable for a shell.
+Without one, `--wikipedia` stops and says this.
+
 Add `-o FILE` and the command fetches the history itself (with `curl`) and
 writes it as a history file, opening nothing; `historyflow FILE` then shows it
 without asking the wiki again:
@@ -47,6 +60,10 @@ historyflow chocolate.hflow
 
 If the wiki says it is being asked too fast, the command waits as long as the
 wiki asks and carries on.
+
+Wikipedia's text is licensed CC BY-SA, and a history file made from an article
+holds that text and its editors' names; passing the file on is republishing it
+under that license.
 
 `--no-open` prints the address without opening a browser, `--port` picks the
 port, and `--first-parent` follows only the mainline of merges. The server

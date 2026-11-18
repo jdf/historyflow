@@ -39,6 +39,8 @@ pub enum Subject {
         article: String,
         /// How many revisions to fetch, from the first.
         revisions: u32,
+        /// How the wiki can reach whoever is running this.
+        contact: String,
     },
 }
 
@@ -69,7 +71,7 @@ impl Subject {
 
     /// A Wikipedia article, by title or address, and how many of its
     /// revisions to fetch.
-    pub fn wikipedia(article: &str, revisions: u32) -> Result<Subject, Error> {
+    pub fn wikipedia(article: &str, revisions: u32, contact: &str) -> Result<Subject, Error> {
         if wikipedia::Article::parse(article).is_none() {
             return Err(format!(
                 "{article} is not an article's title, or its address on a Wikipedia \
@@ -83,6 +85,7 @@ impl Subject {
         Ok(Subject::Wikipedia {
             article: article.to_string(),
             revisions,
+            contact: contact.to_string(),
         })
     }
 }
@@ -106,6 +109,7 @@ struct Session<'a> {
 struct Wikipedia<'a> {
     article: &'a str,
     revisions: u32,
+    contact: &'a str,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -182,7 +186,11 @@ fn session(subject: &Subject) -> Reply {
             history: Some("api/history"),
             wikipedia: None,
         },
-        Subject::Wikipedia { article, revisions } => Session {
+        Subject::Wikipedia {
+            article,
+            revisions,
+            contact,
+        } => Session {
             repository: None,
             files: Vec::new(),
             open: None,
@@ -190,6 +198,7 @@ fn session(subject: &Subject) -> Reply {
             wikipedia: Some(Wikipedia {
                 article,
                 revisions: *revisions,
+                contact,
             }),
         },
     };

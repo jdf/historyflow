@@ -10,6 +10,30 @@ use serde::Deserialize;
 
 use crate::model::SourceVersion;
 
+/// How this tool names itself to a wiki, as Wikimedia's User-Agent
+/// policy asks: its name and version and, in parentheses, how to reach
+/// whoever is running it (`contact`: an email address, a website, a
+/// wiki user name), when that is known. The page sends it as
+/// `Api-User-Agent`, since a page cannot choose its `User-Agent`.
+pub fn user_agent(contact: &str) -> String {
+    let tool = format!("historyflow/{}", crate::version());
+    match contact.trim() {
+        "" => tool,
+        contact => format!("{tool} ({contact})"),
+    }
+}
+
+/// Whether text will do as a contact: something, on one line, that
+/// cannot be mistaken for the end of the parentheses it goes in.
+pub fn contact_is_usable(contact: &str) -> bool {
+    let contact = contact.trim();
+    !contact.is_empty()
+        && contact.len() <= 200
+        && !contact
+            .chars()
+            .any(|c| c.is_control() || c == '(' || c == ')')
+}
+
 /// The most revisions the API returns in one response when their text is
 /// asked for.
 pub const BATCH: u32 = 50;
@@ -280,6 +304,20 @@ mod tests {
             Article::parse("http://en.wikipedia.org/wiki/AC/DC"),
             article("en.wikipedia.org", "AC/DC")
         );
+    }
+
+    #[test]
+    fn the_tool_names_itself_and_whoever_runs_it() {
+        let tool = format!("historyflow/{}", crate::version());
+        assert_eq!(user_agent(""), tool);
+        assert_eq!(
+            user_agent(" ada@example.com "),
+            format!("{tool} (ada@example.com)")
+        );
+        assert!(contact_is_usable("https://example.com/ada"));
+        for bad in ["", "  ", "a\nb", "a) evil/1.0 (b"] {
+            assert!(!contact_is_usable(bad), "{bad:?}");
+        }
     }
 
     #[test]

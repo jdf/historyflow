@@ -1,7 +1,17 @@
 //! Fetching a Wikipedia article into an archive, with the wiki's answers
 //! supplied by the test.
 
-use historyflow_cli::wikipedia::read;
+use historyflow_cli::wikipedia::{contact, read};
+
+#[test]
+fn a_contact_given_is_the_one_used_if_it_will_do() {
+    assert_eq!(
+        contact(Some(" ada@example.com ")).unwrap(),
+        "ada@example.com"
+    );
+    assert!(contact(Some("ada) other/1.0 (x")).is_err());
+    assert!(contact(Some("two\nlines")).is_err());
+}
 
 fn response(ids: std::ops::Range<u32>, more: bool) -> String {
     let revisions: Vec<_> = ids

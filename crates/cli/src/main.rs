@@ -37,6 +37,12 @@ struct Cli {
     /// article's first.
     #[arg(long, value_name = "N", default_value_t = 500, requires = "wikipedia")]
     revisions: u32,
+    /// With --wikipedia: how the wiki can reach you (an email address,
+    /// a website, a wiki user name), which Wikipedia asks tools to
+    /// say. Set it once instead with
+    /// `git config --global historyflow.contact you@example.com`.
+    #[arg(long, requires = "wikipedia")]
+    contact: Option<String>,
     /// With --wikipedia: fetch the history now and write it to this
     /// file, instead of opening the viewer. Open the file later with
     /// `historyflow FILE`, and nothing is asked of the wiki again.
@@ -109,15 +115,19 @@ fn main() -> ExitCode {
 
 fn run(cli: Cli) -> Result<(), Error> {
     let Some(command) = cli.command else {
+        let contact = match &cli.wikipedia {
+            Some(_) => wikipedia::contact(cli.contact.as_deref())?,
+            None => String::new(),
+        };
         if let (Some(article), Some(output)) = (&cli.wikipedia, &cli.output) {
             if cli.revisions == 0 {
                 return Err("there is nothing to write in no revisions".into());
             }
-            let get = |url: &str| {
-                wikipedia::curl(url, |seconds| {
+            let get = wikipedia::rested(|url: &str| {
+                wikipedia::curl(url, &contact, |seconds| {
                     eprint!("\rthe wiki asks for a pause of {seconds} seconds…");
                 })
-            };
+            });
             let archive = wikipedia::read(article, cli.revisions, get, |read| {
                 // The spaces overwrite a longer line about a pause.
                 eprint!("\r{read} revisions{:40}", "");
@@ -133,7 +143,7 @@ fn run(cli: Cli) -> Result<(), Error> {
             return write(&archive, output);
         }
         let subject = match &cli.wikipedia {
-            Some(article) => Subject::wikipedia(article, cli.revisions)?,
+            Some(article) => Subject::wikipedia(article, cli.revisions, &contact)?,
             None => Subject::at(&cli.path, cli.first_parent)?,
         };
         return serve::serve(&subject, cli.port, |address| {
