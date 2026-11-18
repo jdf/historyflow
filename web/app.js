@@ -4,6 +4,9 @@
 //
 // URL parameters, all optional:
 //   src       bundle to load (default: the demo)
+//   wiki      instead of src: a Wikipedia article, by title or address,
+//             whose history to fetch
+//   limit     with wiki: how many revisions to fetch (default 500)
 //   coloring  author | age
 //   spacing   version | date
 //   mode      lines | prose | sentences (default: the bundle's own)
@@ -13,7 +16,11 @@
 //             fractions of the whole (default: all of it)
 //   no-ui     hide everything but the plot (used by the e2e screenshots)
 //   e2e       leave the build id out of the status line
-import init, { App, version } from "./pkg/historyflow_web.js";
+import init, {
+  App,
+  version,
+  wikipedia_request,
+} from "./pkg/historyflow_web.js";
 
 const params = new URLSearchParams(location.search);
 document.body.classList.toggle("no-ui", params.has("no-ui"));
@@ -30,8 +37,9 @@ const controls = {
 };
 
 let app;
-// The text of the loaded bundle, kept so it can be re-read in another mode.
-let bundle = "";
+// The fetch of a Wikipedia history that is under way, if one is; setting
+// its `stopped` ends it after the request in flight.
+let loading = null;
 // What app.load returned: title, mode, version count, authors.
 let summary;
 // What app.version_detail returned for the version in the text panel.
@@ -317,9 +325,14 @@ function showSummary() {
     }),
   );
   const day = (seconds) => new Date(seconds * 1000).toISOString().slice(0, 10);
-  status.textContent =
-    `${summary.versions} versions, ${day(summary.first_timestamp)} to ` +
-    `${day(summary.last_timestamp)} · ${summary.authors.length} authors`;
+  status.textContent = summary.versions
+    ? `${summary.versions} versions, ${day(summary.first_timestamp)} to ` +
+      `${day(summary.last_timestamp)} · ${summary.authors.length} authors`
+    : "No versions";
+  if (loading)
+    status.textContent = `Fetching from Wikipedia… ${status.textContent}`;
+  $("stop").hidden = !loading;
+  $("save").disabled = !summary.versions;
   // The build differs on every commit, so it stays out of e2e screenshots.
   if (!params.has("e2e")) {
     const build = window.__historyflowBuild ?? { id: "unknown", date: "" };
@@ -330,12 +343,90 @@ function showSummary() {
 // Loads bundle text, in the given mode or (if empty) the bundle's own,
 // and puts the crosshair on version `at[0]` at y `at[1]`.
 function load(source, mode, at) {
-  summary = JSON.parse(app.load(source, mode));
-  bundle = source;
+  if (loading) loading.stopped = true;
+  loading = null;
+  showLoaded(JSON.parse(app.load(source, mode)), at);
+}
+
+// Shows a history just loaded or rebuilt, with the crosshair on version
+// `at[0]` at y `at[1]` (by default the last version, at its top).
+function showLoaded(loaded, at) {
+  summary = loaded;
   detail = null;
   showSummary();
-  if (summary.versions > 0) select(at[0] ?? summary.versions - 1, at[1] ?? 0);
-  else draw();
+  if (summary.versions > 0) {
+    select(at[0] ?? summary.versions - 1, at[1] ?? 0);
+  } else {
+    text.replaceChildren();
+    for (const id of ["number", "id", "author", "date", "comment"]) {
+      $(`version-${id}`).textContent = "";
+    }
+    $("version-swatch").style.background = "none";
+    draw();
+  }
+}
+
+// --- Wikipedia ------------------------------------------------------------
+
+// One request to the wiki, waiting and trying again when it says we are
+// asking too fast.
+async function fetchWikipedia(url, job) {
+  for (let attempt = 0; ; attempt++) {
+    // Wikimedia asks tools to say who they are; a page cannot set
+    // User-Agent, so it reads this header instead.
+    const response = await fetch(url, {
+      headers: { "Api-User-Agent": `historyflow/${version()}` },
+    });
+    if (response.ok) return response.text();
+    if (response.status !== 429 || attempt === 4 || job.stopped) {
+      throw new Error(`Wikipedia: HTTP ${response.status}`);
+    }
+    const wait =
+      Number(response.headers.get("Retry-After")) || 5 * (attempt + 1);
+    await new Promise((resolve) => setTimeout(resolve, wait * 1000));
+  }
+}
+
+// Fetches an article's history from its first revision, up to `limit`
+// revisions, a batch at a time, showing it as it arrives. The crosshair
+// follows the newest revision unless it has been put somewhere else.
+async function loadWikipedia(article, limit) {
+  if (loading) loading.stopped = true;
+  const job = (loading = { stopped: false });
+  try {
+    app.begin(article, "prose");
+    showLoaded(JSON.parse(app.summary()), []);
+    let next = "";
+    while (!job.stopped && summary.versions < limit) {
+      const url = wikipedia_request(article, next, limit - summary.versions);
+      const response = await fetchWikipedia(url, job);
+      if (job.stopped) break;
+      const following = cursor.version >= summary.versions - 1;
+      next = app.add_wikipedia(response);
+      if (next === undefined) loading = null;
+      summary = JSON.parse(app.summary());
+      showSummary();
+      if (following && summary.versions) {
+        detail = null;
+        select(summary.versions - 1, 0);
+      } else {
+        if (detail) {
+          $("version-number").textContent =
+            `${detail.index + 1} of ${summary.versions}`;
+          $("next").disabled = false;
+        }
+        draw();
+      }
+      if (next === undefined) break;
+    }
+  } catch (error) {
+    if (loading === job) loading = null;
+    showSummary();
+    report(error);
+    return;
+  }
+  if (loading === job) loading = null;
+  showSummary();
 }
 
 function report(error) {
@@ -360,14 +451,19 @@ try {
   app.set_coloring(controls.coloring.value);
   app.set_spacing(controls.spacing.value);
 
-  const source = params.get("src") ?? "samples/demo.json";
-  const response = await fetch(source);
-  if (!response.ok) throw new Error(`${source}: HTTP ${response.status}`);
-  const at = (params.get("at") ?? "").split(",").filter(Boolean).map(Number);
-  load(await response.text(), params.get("mode") ?? "", at);
-  if (params.has("view")) {
-    app.set_view(...params.get("view").split(",").map(Number));
-    draw();
+  if (params.has("wiki")) {
+    // Not awaited: the history shows as it arrives.
+    loadWikipedia(params.get("wiki"), Number(params.get("limit")) || 500);
+  } else {
+    const source = params.get("src") ?? "samples/demo.json";
+    const response = await fetch(source);
+    if (!response.ok) throw new Error(`${source}: HTTP ${response.status}`);
+    const at = (params.get("at") ?? "").split(",").filter(Boolean).map(Number);
+    load(await response.text(), params.get("mode") ?? "", at);
+    if (params.has("view")) {
+      app.set_view(...params.get("view").split(",").map(Number));
+      draw();
+    }
   }
 
   controls.coloring.onchange = () => {
@@ -380,11 +476,9 @@ try {
     draw();
   };
   controls.mode.onchange = () => {
-    try {
-      load(bundle, controls.mode.value, [cursor.version, cursor.y]);
-    } catch (error) {
-      report(error);
-    }
+    // A fetch under way carries on, in the new mode.
+    const rebuilt = JSON.parse(app.set_mode(controls.mode.value));
+    showLoaded(rebuilt, [cursor.version, cursor.y]);
   };
 
   canvas.onpointerdown = (event) => {
@@ -412,6 +506,30 @@ try {
     step(by);
   };
 
+  $("wikipedia").onclick = () => $("wiki").showModal();
+  $("wiki").onclose = () => {
+    if ($("wiki").returnValue !== "load") return;
+    loadWikipedia(
+      $("wiki-article").value,
+      Number($("wiki-limit").value) || 500,
+    );
+  };
+  $("stop").onclick = () => {
+    if (loading) loading.stopped = true;
+    loading = null;
+    showSummary();
+  };
+  // Saves what is loaded as a bundle, so a history fetched once need not
+  // be fetched again.
+  $("save").onclick = () => {
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(
+      new Blob([app.bundle()], { type: "application/json" }),
+    );
+    link.download = `${summary.title.replace(/[^\p{L}\p{N}]+/gu, "-")}.json`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
   $("open").onclick = () => $("file").click();
   $("file").onchange = (event) => {
     if (event.target.files[0]) readFile(event.target.files[0]);
@@ -435,10 +553,13 @@ try {
 
   // For the e2e tests: the state they assert on, and the flag they wait
   // for before looking.
+  window.__historyflowApp = app;
   window.__historyflow = {
     cursor: () => cursor,
     detail: () => detail,
     view: () => [...app.view()],
+    summary: () => summary,
+    loading: () => loading !== null,
   };
   window.__historyflowReady = true;
 } catch (error) {

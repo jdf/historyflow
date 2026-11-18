@@ -33,6 +33,7 @@ mod model;
 mod passage;
 mod segment;
 mod view;
+pub mod wikipedia;
 
 pub use attribute::{Config, HistoryBuilder, Matching, Measure};
 pub use bundle::{Bundle, Mode};

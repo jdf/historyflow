@@ -63,6 +63,19 @@ binary, one module each, and write a bundle. `git_file` shells out to `git`
 (`log --follow`, `cat-file --batch`); its tests build a real repository in a
 temporary directory.
 
+## The Wikipedia source
+
+It runs in the page, since Wikipedia allows cross-origin reads. The half that
+needs no network is `core::wikipedia`: `Article::parse` (title or address),
+`Article::request` (the URL for the next batch) and `parse` (a response into
+`SourceVersion`s and a continuation). `web/app.js` does the fetching, one
+request at a time, and feeds each response to `App::add_wikipedia`, which
+appends to the history; the page redraws after every batch.
+
+Tests never touch the network: `core` tests use a canned response, and
+`tools/e2e-ui.mjs` replaces `fetch` for the wiki's API. Requests carry an
+`Api-User-Agent` header naming only the tool and its version.
+
 ## Architecture rules
 
 - **`crates/core`** has no browser or GL dependency. All model, diff and layout

@@ -11,3 +11,4 @@ workspace = true
 [dependencies]
 imara-diff = "0.2.0"
 serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"

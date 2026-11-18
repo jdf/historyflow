@@ -4,8 +4,8 @@
 mod renderer;
 
 use historyflow_core::{
-    Bundle, History, HistoryBuilder, Mode, Spacing, VersionIndex, View, author_colors, layout,
-    passages,
+    Bundle, History, HistoryBuilder, Mode, SourceVersion, Spacing, VersionIndex, View,
+    author_colors, layout, passages, wikipedia,
 };
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
@@ -31,7 +31,9 @@ pub struct App {
     /// The loaded bundle; its versions' text is what the text panel shows.
     bundle: Bundle,
     mode: Mode,
-    history: History,
+    /// Holds the history, and can add versions to it as a source that
+    /// arrives in batches delivers them.
+    builder: HistoryBuilder,
     spacing: Spacing,
     coloring: Coloring,
     /// The x of each version, from the current layout.
@@ -92,7 +94,7 @@ impl App {
             renderer: Renderer::new(canvas)?,
             bundle: Bundle::new("", Mode::default(), Vec::new()),
             mode: Mode::default(),
-            history: History::default(),
+            builder: HistoryBuilder::new(Mode::default().config()),
             spacing: Spacing::default(),
             coloring: Coloring::default(),
             xs: Vec::new(),
@@ -112,21 +114,42 @@ impl App {
         }
         let mode = match mode {
             "" => bundle.mode,
-            name => Mode::from_name(name).ok_or_else(|| format!("unknown mode {name:?}"))?,
+            name => parse_mode(name)?,
         };
-        let mut builder = HistoryBuilder::new(mode.config());
-        for version in &bundle.versions {
-            builder.push(version);
-        }
-        self.history = builder.finish();
-        self.mode = mode;
         self.bundle = bundle;
-        self.cursor = None;
-        self.upload()?;
-        self.view = View::FULL;
-        let bundle = &self.bundle;
+        self.rebuild(mode)
+    }
 
-        let history = &self.history;
+    /// Compares the loaded versions afresh in another mode, and returns
+    /// the new summary.
+    pub fn set_mode(&mut self, mode: &str) -> Result<String, JsValue> {
+        self.rebuild(parse_mode(mode)?)
+    }
+
+    /// Starts an empty history, to be filled by [`App::add_wikipedia`].
+    pub fn begin(&mut self, title: &str, mode: &str) -> Result<(), JsValue> {
+        self.bundle = Bundle::new(title, parse_mode(mode)?, Vec::new());
+        self.rebuild(self.bundle.mode).map(drop)
+    }
+
+    /// Adds the revisions in one response of the MediaWiki API to the
+    /// history, and returns what to pass to [`wikipedia_request`] for
+    /// the next batch, or nothing if this was the last.
+    pub fn add_wikipedia(&mut self, response: &str) -> Result<Option<String>, JsValue> {
+        let batch = wikipedia::parse(response)?;
+        self.bundle.title = batch.title;
+        self.add(batch.versions)?;
+        Ok(batch.next)
+    }
+
+    /// The loaded history as a bundle, to save.
+    pub fn bundle(&self) -> String {
+        serde_json::to_string(&self.bundle).expect("serializable")
+    }
+
+    /// What the page needs to know about the loaded history, as JSON.
+    pub fn summary(&self) -> String {
+        let history = self.history();
         let colors = author_colors(history.authors());
         let byte = |v: f32| (v * 255.0).round() as u8;
         let authors = history
@@ -146,15 +169,15 @@ impl App {
             })
             .collect();
         let summary = Summary {
-            title: &bundle.title,
-            mode: mode.name(),
+            title: &self.bundle.title,
+            mode: self.mode.name(),
             versions: history.versions().len(),
             tokens: history.token_count(),
             first_timestamp: history.versions().first().map(|v| v.timestamp),
             last_timestamp: history.versions().last().map(|v| v.timestamp),
             authors,
         };
-        Ok(serde_json::to_string(&summary).expect("serializable"))
+        serde_json::to_string(&summary).expect("serializable")
     }
 
     /// `version` (evenly spaced) or `date`.
@@ -199,9 +222,9 @@ impl App {
     /// Moves the crosshair, keeping it within the version's text, and
     /// returns the y it ended up at.
     pub fn set_cursor(&mut self, version: u32, y: f32) -> Result<f32, JsValue> {
-        let found = self.history.versions().get(version as usize);
+        let found = self.history().versions().get(version as usize);
         let found = found.ok_or_else(|| format!("no version {version}"))?;
-        let end = (found.weight() as f64 / self.history.tallest() as f64) as f32;
+        let end = (found.weight() as f64 / self.history().tallest() as f64) as f32;
         let y = y.clamp(0.0, end);
         self.cursor = Some(Cursor { version, y });
         Ok(y)
@@ -209,7 +232,7 @@ impl App {
 
     /// A version's metadata and its text divided by origin, as JSON.
     pub fn version_detail(&self, version: u32) -> Result<String, JsValue> {
-        let found = self.history.versions().get(version as usize);
+        let found = self.history().versions().get(version as usize);
         let found = found.ok_or_else(|| format!("no version {version}"))?;
         let text = self.bundle.versions[version as usize].text.as_str();
         let segmenter = self.mode.config().segmenter;
@@ -219,10 +242,10 @@ impl App {
             author: found.author.0,
             timestamp: found.timestamp,
             comment: &found.comment,
-            passages: passages(&self.history, version, text, &*segmenter)
+            passages: passages(self.history(), version, text, &*segmenter)
                 .into_iter()
                 .map(|p| {
-                    let author = self.history.versions()[p.origin as usize].author.0;
+                    let author = self.history().versions()[p.origin as usize].author.0;
                     (&text[p.text], author, p.origin, p.y[0], p.y[1])
                 })
                 .collect(),
@@ -262,7 +285,7 @@ impl App {
 
     /// Draws the plot. `pixel_ratio` is CSS pixels to canvas pixels.
     pub fn draw(&self, pixel_ratio: f32) {
-        let versions = self.history.versions();
+        let versions = self.history().versions();
         let overlay = self.cursor.map(|cursor| {
             // Mark every version by the author of the selected one.
             let author = versions[cursor.version as usize].author;
@@ -284,11 +307,42 @@ impl App {
         );
     }
 
+    fn history(&self) -> &History {
+        self.builder.history()
+    }
+
+    /// Builds the history again from the bundle's versions.
+    fn rebuild(&mut self, mode: Mode) -> Result<String, JsValue> {
+        self.mode = mode;
+        self.builder = HistoryBuilder::new(mode.config());
+        for version in &self.bundle.versions {
+            self.builder.push(version);
+        }
+        self.cursor = None;
+        self.upload()?;
+        self.view = View::FULL;
+        Ok(self.summary())
+    }
+
+    /// Appends versions to the history and the bundle.
+    fn add(&mut self, versions: Vec<SourceVersion>) -> Result<(), JsValue> {
+        for version in &versions {
+            self.builder.push(version);
+        }
+        self.bundle.versions.extend(versions);
+        self.upload()
+    }
+
     fn upload(&mut self) -> Result<(), JsValue> {
-        let layout = layout(&self.history, self.spacing);
-        let colors = author_colors(self.history.authors());
+        let layout = layout(self.history(), self.spacing);
+        let colors = author_colors(self.history().authors());
         self.renderer.upload(&layout, &colors)?;
-        // Keep the same versions on screen when the spacing moves them.
+        // Keep the same versions on screen when the spacing moves them,
+        // or all of them if all of them were.
+        if self.view == View::FULL {
+            self.xs = layout.xs;
+            return Ok(());
+        }
         let (first, last) = (self.view.start, self.view.start + self.view.width);
         let (first, last) = (index_at(&self.xs, first), index_at(&self.xs, last));
         self.xs = layout.xs;
@@ -323,4 +377,19 @@ fn x_at(xs: &[f32], index: f32) -> f32 {
     let before = (index.max(0.0) as usize).min(xs.len() - 1);
     let next = xs.get(before + 1).copied().unwrap_or(last);
     xs[before] + (index - before as f32).clamp(0.0, 1.0) * (next - xs[before])
+}
+
+fn parse_mode(name: &str) -> Result<Mode, JsValue> {
+    Mode::from_name(name).ok_or_else(|| format!("unknown mode {name:?}").into())
+}
+
+/// The address to fetch for a batch of up to `limit` revisions of a
+/// Wikipedia article, given as a title or as the article's address.
+/// `next` is what [`App::add_wikipedia`] returned for the previous batch,
+/// or empty for the first.
+#[wasm_bindgen]
+pub fn wikipedia_request(article: &str, next: &str, limit: u32) -> Result<String, JsValue> {
+    let article = wikipedia::Article::parse(article)
+        .ok_or_else(|| format!("not an article title or address: {article:?}"))?;
+    Ok(article.request(next, limit))
 }

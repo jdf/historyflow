@@ -32,7 +32,12 @@
           <option value="sentences">sentences (2004)</option>
         </select>
       </label>
+      <button id="stop" type="button" hidden>Stop</button>
+      <button id="wikipedia" type="button">Wikipedia…</button>
       <button id="open" type="button">Open bundle…</button>
+      <button id="save" type="button" title="Save what is loaded as a bundle">
+        Save
+      </button>
       <input id="file" type="file" accept=".json,application/json" hidden />
     </header>
     <main>
@@ -68,6 +73,27 @@
       </section>
     </main>
     <footer id="status"></footer>
+    <dialog id="wiki">
+      <form method="dialog">
+        <h2>Wikipedia article history</h2>
+        <label
+          >Article title or address
+          <input id="wiki-article" required placeholder="Chocolate" />
+        </label>
+        <label
+          >Revisions to fetch, starting from the first
+          <input id="wiki-limit" type="number" min="1" value="500" />
+        </label>
+        <p>
+          Revisions arrive 50 at a time, with their full text, and are shown as
+          they arrive. A long history takes a while and a lot of memory.
+        </p>
+        <menu>
+          <button value="cancel" formnovalidate>Cancel</button>
+          <button value="load">Fetch</button>
+        </menu>
+      </form>
+    </dialog>
     <script src="build-info.js"></script>
     <script type="module" src="app.js"></script>
   </body>

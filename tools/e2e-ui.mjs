@@ -348,6 +348,185 @@ try {
     "changing the comparison keeps the version",
     near((await cursor()).version, 39.75, 1),
   );
+  // --- A Wikipedia history is fetched in batches and shown as it arrives.
+  // The wiki is played by canned responses: no request leaves the page.
+  const revision = (revid, user, timestamp, content, extra = {}) => ({
+    revid,
+    user,
+    timestamp,
+    comment: `edit ${revid}`,
+    slots: { main: { content } },
+    ...extra,
+  });
+  const response = (revisions, next) => ({
+    ...(next ? { continue: { rvcontinue: next, continue: "||" } } : {}),
+    query: { pages: [{ title: "Chocolate", revisions }] },
+  });
+  const batches = [
+    response(
+      [
+        revision(1, "Ada", "2003-01-01T00:00:00Z", "Chocolate is a food."),
+        revision(
+          2,
+          "203.0.113.7",
+          "2003-01-02T00:00:00Z",
+          "Chocolate is a sweet food.",
+          { anon: true },
+        ),
+        revision(
+          3,
+          "Ada",
+          "2003-01-03T00:00:00Z",
+          "Chocolate is a sweet food. It melts.",
+        ),
+      ],
+      "20030103|3",
+    ),
+    response([
+      revision(
+        4,
+        "Brooke",
+        "2003-01-04T00:00:00Z",
+        "Chocolate is a sweet food. It melts. It is brown.",
+      ),
+      revision(
+        5,
+        "Ada",
+        "2003-01-05T00:00:00Z",
+        "Chocolate is a sweet brown food. It melts.",
+      ),
+    ]),
+  ];
+  // Opens the page with fetch replaced for the wiki's API, answering the
+  // nth request with the nth of `answers`.
+  const openWiki = async (query, answers) => {
+    const wiki = await browser.newPage();
+    await wiki.setViewport({ width: 1200, height: 750, deviceScaleFactor: 1 });
+    await wiki.evaluateOnNewDocument((answers) => {
+      const real = window.fetch;
+      window.__wikiRequests = [];
+      window.fetch = async (url, options) => {
+        if (!String(url).includes("/w/api.php")) return real(url, options);
+        window.__wikiRequests.push({
+          url: String(url),
+          headers: options?.headers,
+        });
+        const answer =
+          answers[Math.min(window.__wikiRequests.length, answers.length) - 1];
+        return new Response(JSON.stringify(answer), { status: 200 });
+      };
+    }, answers);
+    await wiki.goto(baseUrl + query, { waitUntil: "load" });
+    const deadline = Date.now() + 30000;
+    const settled =
+      "window.__historyflowReady === true && !window.__historyflow.loading()";
+    while (!(await wiki.evaluate(settled))) {
+      if (Date.now() > deadline) throw new Error(`timeout loading ${query}`);
+      await pause(50);
+    }
+    return wiki;
+  };
+
+  let wiki = await openWiki("?e2e&wiki=Chocolate&limit=40", batches);
+  let loaded = await wiki.evaluate("window.__historyflow.summary()");
+  let requests = await wiki.evaluate("window.__wikiRequests");
+  check("both batches of the article arrive", loaded.versions === 5, loaded);
+  check("the title is the wiki's", loaded.title === "Chocolate", loaded);
+  check("wiki text is compared by words", loaded.mode === "prose", loaded);
+  check(
+    "authors are counted, the anonymous one in white",
+    JSON.stringify(
+      loaded.authors.map((a) => [a.name, a.versions, a.anonymous]),
+    ) ===
+      JSON.stringify([
+        ["Ada", 3, false],
+        ["203.0.113.7", 1, true],
+        ["Brooke", 1, false],
+      ]) && loaded.authors[1].color === "#ffffff",
+    loaded.authors,
+  );
+  check("one request per batch", requests.length === 2, requests);
+  check(
+    "the first request asks the English Wikipedia for the article from its start",
+    requests[0].url.startsWith("https://en.wikipedia.org/w/api.php?") &&
+      requests[0].url.includes("&titles=Chocolate&") &&
+      requests[0].url.includes("&rvlimit=40&") &&
+      requests[0].url.includes("&rvdir=newer&") &&
+      requests[0].url.includes("&origin=*") &&
+      !requests[0].url.includes("rvcontinue"),
+    requests[0],
+  );
+  check(
+    "the second continues from the first and asks only for what is left",
+    requests[1].url.includes("&rvcontinue=20030103%7C3") &&
+      requests[1].url.includes("&rvlimit=37&"),
+    requests[1],
+  );
+  check(
+    "requests say who is asking",
+    /^historyflow\//.test(requests[0].headers["Api-User-Agent"]),
+    requests[0].headers,
+  );
+  check(
+    "the crosshair follows the newest revision",
+    (await wiki.evaluate("window.__historyflow.cursor().version")) === 4 &&
+      (await wiki.evaluate(
+        () => document.getElementById("version-number").textContent,
+      )) === "5 of 5",
+  );
+  check(
+    "the newest revision's text is shown",
+    (await wiki.evaluate(() => document.getElementById("text").textContent)) ===
+      "Chocolate is a sweet brown food. It melts.",
+  );
+  check(
+    "Stop goes away when the fetch ends",
+    await wiki.evaluate(() => document.getElementById("stop").hidden),
+  );
+  const saved = JSON.parse(
+    await wiki.evaluate("window.__historyflowApp.bundle()"),
+  );
+  check(
+    "what was fetched can be saved as a bundle",
+    saved.format === "historyflow-bundle/1" &&
+      saved.title === "Chocolate" &&
+      saved.versions.length === 5,
+    saved.format,
+  );
+  await wiki.close();
+
+  wiki = await openWiki(
+    "?e2e&wiki=https://de.wikipedia.org/wiki/Schokolade&limit=2",
+    batches,
+  );
+  loaded = await wiki.evaluate("window.__historyflow.summary()");
+  requests = await wiki.evaluate("window.__wikiRequests");
+  check(
+    "the limit stops the fetch though more remains",
+    loaded.versions === 3 && requests.length === 1,
+    loaded.versions,
+  );
+  check(
+    "an address chooses the wiki, and the limit the batch size",
+    requests[0].url.startsWith("https://de.wikipedia.org/w/api.php?") &&
+      requests[0].url.includes("&titles=Schokolade&") &&
+      requests[0].url.includes("&rvlimit=2&"),
+    requests[0],
+  );
+  await wiki.close();
+
+  wiki = await openWiki("?e2e&wiki=Nonesuch", [
+    { query: { pages: [{ title: "Nonesuch", missing: true }] } },
+  ]);
+  const said = await wiki.evaluate(
+    () => document.getElementById("status").textContent,
+  );
+  check(
+    "a missing article is reported",
+    said.includes("there is no article called “Nonesuch”"),
+    said,
+  );
+  await wiki.close();
 } catch (error) {
   failures += 1;
   console.log(`FAILED: ${error.message}`);

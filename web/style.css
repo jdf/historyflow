@@ -218,3 +218,49 @@ body.no-ui #reader,
 body.no-ui #status {
   display: none;
 }
+dialog {
+  width: 380px;
+  color: #ccc;
+  background: #222;
+  border: 1px solid #555;
+  border-radius: 6px;
+  padding: 16px;
+}
+dialog::backdrop {
+  background: rgb(0 0 0 / 60%);
+}
+dialog h2 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ddd;
+  text-transform: none;
+  letter-spacing: 0;
+  margin-bottom: 12px;
+}
+dialog label {
+  display: block;
+  margin-bottom: 12px;
+}
+dialog input {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: 4px;
+  font: inherit;
+  font-size: 13px;
+  color: #eee;
+  background: #111;
+  border: 1px solid #555;
+  border-radius: 3px;
+  padding: 4px 6px;
+}
+dialog menu {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+}
+button:disabled {
+  opacity: 0.4;
+}

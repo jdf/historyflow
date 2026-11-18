@@ -48,6 +48,23 @@ press beside it, to move.
 With no bundle the page shows `web/samples/demo.json`, a synthetic wiki page
 written by `tools/make-sample.py`.
 
+## Viewing a Wikipedia article's history
+
+Press **Wikipedia…** and give an article's title (taken to be on the English
+Wikipedia) or its address on any Wikipedia, and how many revisions to fetch. Or
+link straight to one: `?wiki=Chocolate&limit=500`.
+
+The page asks the wiki itself, 50 revisions at a time starting from the
+article's first, and draws the history as it arrives; **Stop** ends the fetch
+early. Editors without an account are drawn in white and greys. A revision whose
+text the wiki's administrators have hidden is skipped.
+
+**Save** writes whatever is loaded as a bundle, so that a history fetched once
+can be opened again without asking the wiki.
+
+Every revision's full text is held in memory, so a long history of a long
+article is heavy: 500 revisions of a 50 KB article is 25 MB.
+
 ## Layout
 
 | Path          | Contents                                                              |
