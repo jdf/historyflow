@@ -45,6 +45,16 @@ the whole document is always in view top to bottom. While zoomed in, a scroll
 thumb under the plot shows which part of the history is on screen; drag it, or
 press beside it, to move.
 
+Two menus set the vertical scale, independently of each other:
+
+- **height** is what the plot's full height stands for: the _longest version_ in
+  the whole history, or the _longest in view_. With the second, one enormous
+  version squeezes the rest only while it is on screen; zoom in beside it and
+  the others fill the plot.
+- **scale** is _linear_ or _log_. On the log scale the start of the document is
+  drawn nearly in proportion and the rest progressively squeezed, so a version
+  many times the usual length takes only a few times the usual height.
+
 With no bundle the page shows `web/samples/demo.json`, a synthetic wiki page
 written by `tools/make-sample.py`.
 

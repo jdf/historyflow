@@ -4,7 +4,7 @@
 mod renderer;
 
 use historyflow_core::{
-    Bundle, History, HistoryBuilder, Mode, SourceVersion, Spacing, VersionIndex, View,
+    Bundle, History, HistoryBuilder, Mode, SourceVersion, Spacing, VersionIndex, View, YScale,
     author_colors, layout, passages, wikipedia,
 };
 use serde::Serialize;
@@ -38,8 +38,15 @@ pub struct App {
     coloring: Coloring,
     /// The x of each version, from the current layout.
     xs: Vec<f32>,
+    /// Each version's length, in the layout's y.
+    extents: Vec<f32>,
     /// The part of the history on screen.
     view: View,
+    /// Whether the plot's height fits the versions on screen, not the
+    /// longest of the whole history.
+    fit_view: bool,
+    /// Whether length is drawn on a logarithmic scale.
+    log: bool,
     cursor: Option<Cursor>,
 }
 
@@ -98,7 +105,10 @@ impl App {
             spacing: Spacing::default(),
             coloring: Coloring::default(),
             xs: Vec::new(),
+            extents: Vec::new(),
             view: View::FULL,
+            fit_view: false,
+            log: false,
             cursor: None,
         })
     }
@@ -200,6 +210,35 @@ impl App {
         Ok(())
     }
 
+    /// What the plot's height stands for: `all`, the longest version in
+    /// the history, or `view`, the longest of those on screen, so that
+    /// one enormous version squeezes the rest only while it is in view.
+    pub fn set_height(&mut self, height: &str) -> Result<(), JsValue> {
+        self.fit_view = match height {
+            "all" => false,
+            "view" => true,
+            other => return Err(format!("unknown height {other:?}").into()),
+        };
+        Ok(())
+    }
+
+    /// `linear`, or `log` to squeeze long versions progressively.
+    pub fn set_scale(&mut self, scale: &str) -> Result<(), JsValue> {
+        self.log = match scale {
+            "linear" => false,
+            "log" => true,
+            other => return Err(format!("unknown scale {other:?}").into()),
+        };
+        Ok(())
+    }
+
+    /// The vertical scale in force, as `[top, log]`: see
+    /// `historyflow_core::YScale`.
+    pub fn y_scale_now(&self) -> Vec<f32> {
+        let scale = self.y_scale();
+        vec![scale.top, scale.log]
+    }
+
     /// The version and position under a point of the canvas, given in
     /// CSS pixels along with the canvas's CSS size: `[version, y]`, or
     /// empty if nothing is loaded. The version is the nearest one; y is
@@ -209,7 +248,7 @@ impl App {
             return Vec::new();
         }
         let x = self.view.at(across(x, width));
-        let y = across(y, height);
+        let y = self.y_scale().at(across(y, height).max(0.0));
         let after = self.xs.partition_point(|&version_x| version_x < x);
         let nearest = match (after.checked_sub(1), self.xs.get(after)) {
             (Some(before), Some(&next)) if x - self.xs[before] <= next - x => before,
@@ -286,12 +325,13 @@ impl App {
     /// Draws the plot. `pixel_ratio` is CSS pixels to canvas pixels.
     pub fn draw(&self, pixel_ratio: f32) {
         let versions = self.history().versions();
+        let scale = self.y_scale();
         let overlay = self.cursor.map(|cursor| {
             // Mark every version by the author of the selected one.
             let author = versions[cursor.version as usize].author;
             Overlay {
                 x: self.xs[cursor.version as usize],
-                y: cursor.y,
+                y: scale.down(cursor.y),
                 marks: (versions.iter().zip(&self.xs))
                     .filter(|(version, _)| version.author == author)
                     .map(|(_, &x)| x)
@@ -302,6 +342,7 @@ impl App {
             self.coloring,
             versions.len(),
             self.view,
+            scale,
             pixel_ratio,
             overlay.as_ref(),
         );
@@ -309,6 +350,35 @@ impl App {
 
     fn history(&self) -> &History {
         self.builder.history()
+    }
+
+    fn y_scale(&self) -> YScale {
+        let log = if self.log {
+            YScale::log_for(&self.extents)
+        } else {
+            0.0
+        };
+        if !self.fit_view {
+            return YScale { top: 1.0, log };
+        }
+        // The longest version in view; or, if the view falls between
+        // versions, of the two it falls between.
+        let (start, end) = (self.view.start, self.view.start + self.view.width);
+        let first = self.xs.partition_point(|&x| x < start);
+        let mut last = self.xs.partition_point(|&x| x <= end);
+        let mut first = first.min(self.xs.len().saturating_sub(1));
+        if first >= last {
+            first = first.saturating_sub(1);
+            last = (first + 2).min(self.xs.len());
+        }
+        let top = self.extents[first..last]
+            .iter()
+            .copied()
+            .fold(0.0, f32::max);
+        YScale {
+            top: if top > 0.0 { top } else { 1.0 },
+            log,
+        }
     }
 
     /// Builds the history again from the bundle's versions.
@@ -337,6 +407,11 @@ impl App {
         let layout = layout(self.history(), self.spacing);
         let colors = author_colors(self.history().authors());
         self.renderer.upload(&layout, &colors)?;
+        let tallest = self.history().tallest() as f64;
+        let extent = |weight: u64| (weight as f64 / tallest) as f32;
+        self.extents = (self.history().versions().iter())
+            .map(|version| extent(version.weight()))
+            .collect();
         // Keep the same versions on screen when the spacing moves them,
         // or all of them if all of them were.
         if self.view == View::FULL {

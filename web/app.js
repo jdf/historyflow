@@ -9,6 +9,9 @@
 //   limit     with wiki: how many revisions to fetch (default 500)
 //   coloring  author | age
 //   spacing   version | date
+//   height    all | view — whether the plot is as tall as the longest
+//             version of the whole history, or of those on screen
+//   scale     linear | log
 //   mode      lines | prose | sentences (default: the bundle's own)
 //   at        version,y — where the crosshair starts (default: the last
 //             version, at its top); y is a fraction of the plot's height
@@ -33,6 +36,8 @@ const marker = $("marker");
 const controls = {
   coloring: $("coloring"),
   spacing: $("spacing"),
+  height: $("height"),
+  scale: $("scale"),
   mode: $("mode"),
 };
 
@@ -445,11 +450,13 @@ async function readFile(file) {
 try {
   await init();
   app = new App(canvas);
-  for (const name of ["coloring", "spacing"]) {
+  for (const name of ["coloring", "spacing", "height", "scale"]) {
     if (params.has(name)) controls[name].value = params.get(name);
   }
   app.set_coloring(controls.coloring.value);
   app.set_spacing(controls.spacing.value);
+  app.set_height(controls.height.value);
+  app.set_scale(controls.scale.value);
 
   if (params.has("wiki")) {
     // Not awaited: the history shows as it arrives.
@@ -473,6 +480,14 @@ try {
   };
   controls.spacing.onchange = () => {
     app.set_spacing(controls.spacing.value);
+    draw();
+  };
+  controls.height.onchange = () => {
+    app.set_height(controls.height.value);
+    draw();
+  };
+  controls.scale.onchange = () => {
+    app.set_scale(controls.scale.value);
     draw();
   };
   controls.mode.onchange = () => {
@@ -558,6 +573,7 @@ try {
     cursor: () => cursor,
     detail: () => detail,
     view: () => [...app.view()],
+    yScale: () => [...app.y_scale_now()],
     summary: () => summary,
     loading: () => loading !== null,
   };

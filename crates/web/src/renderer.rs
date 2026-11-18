@@ -1,7 +1,7 @@
 //! Draws a layout with WebGL2: every quad is one instance of a unit
 //! square, placed by the vertex shader.
 
-use historyflow_core::{Layout, Quad, View};
+use historyflow_core::{Layout, Quad, View, YScale};
 use wasm_bindgen::prelude::*;
 use web_sys::{
     HtmlCanvasElement, WebGl2RenderingContext as Gl, WebGlBuffer, WebGlProgram, WebGlShader,
@@ -71,17 +71,24 @@ layout(location = 3) in vec3 info;    // author, left age, right age
 uniform vec2 viewport;    // canvas size in pixels
 uniform vec4 plot;        // the plot's rectangle in pixels: x, y, width, height
 uniform vec2 view;        // the layout x at the plot's left edge, and the span across it
+uniform vec2 y_scale;     // the layout y at the plot's bottom edge, and the log steepness (0: linear)
 uniform float line_width; // width of a version's line in pixels
 uniform float age_span;   // the age, in versions, drawn as fully aged
 
 flat out int author;
 out float age;
 
+// historyflow_core::YScale::down.
+float curve(float y) {
+    return y_scale.y > 0.0 ? log(1.0 + y_scale.y * y) : y;
+}
+
 void main() {
     bool right = corner.x > 0.5;
     float x = right ? xs.y : xs.x;
     float y = right ? mix(ys.z, ys.w, corner.y) : mix(ys.x, ys.y, corner.y);
-    vec2 pixel = plot.xy + vec2((x - view.x) / view.y, y) * plot.zw;
+    vec2 across = vec2((x - view.x) / view.y, curve(y) / curve(y_scale.x));
+    vec2 pixel = plot.xy + across * plot.zw;
     // A version's own line has no width in layout coordinates.
     if (xs.x == xs.y) {
         pixel.x += (corner.x - 0.5) * line_width;
@@ -208,6 +215,7 @@ impl Renderer {
         coloring: Coloring,
         versions: usize,
         view: View,
+        scale: YScale,
         pixel_ratio: f32,
         overlay: Option<&Overlay>,
     ) {
@@ -227,15 +235,21 @@ impl Renderer {
         let spacing = plot_width / (versions.max(2) as f32 * view.width);
         let line_width = (2.0 * pixel_ratio).min(spacing * 0.5).max(1.0);
 
-        // Zoomed in, the plot continues past both sides; keep it out of
-        // the margins (but for the half of a line that overhangs them).
+        // Zoomed in, the plot continues past both sides, and with the
+        // height fitted to the view a longer version just off screen runs
+        // off the bottom; keep it all out of the margins (but for the
+        // half of a line that overhangs them at the sides).
         gl.enable(Gl::SCISSOR_TEST);
         let overhang = line_width / 2.0;
-        gl.scissor(
+        let (left, across) = (
             (margin - overhang).floor() as i32,
-            0,
             (plot_width + 2.0 * overhang).ceil() as i32,
-            height as i32,
+        );
+        gl.scissor(
+            left,
+            margin.floor() as i32,
+            across,
+            plot_height.ceil() as i32,
         );
 
         gl.use_program(Some(&self.program));
@@ -249,6 +263,7 @@ impl Renderer {
         set(uniform("viewport"), &[width, height]);
         set(uniform("plot"), &[margin, margin, plot_width, plot_height]);
         set(uniform("view"), &[view.start, view.width]);
+        set(uniform("y_scale"), &[scale.top, scale.log]);
         set(uniform("line_width"), &[line_width]);
         set(uniform("age_span"), &[versions.max(2) as f32 - 1.0]);
         gl.uniform1i(uniform("coloring").as_ref(), coloring as i32);
@@ -263,6 +278,8 @@ impl Renderer {
             gl.disable(Gl::SCISSOR_TEST);
             return;
         };
+        // The marks sit in the bottom margin.
+        gl.scissor(left, 0, across, height as i32);
         gl.use_program(Some(&self.solid));
         let uniform = |name| gl.get_uniform_location(&self.solid, name);
         gl.uniform2f(uniform("viewport").as_ref(), width, height);
@@ -293,7 +310,11 @@ impl Renderer {
         let x = margin + view.across(overlay.x) * plot_width;
         let y = margin + overlay.y * plot_height;
         fill_rect(x - thin / 2.0, margin, thin, plot_height, WHITE);
-        fill_rect(margin, y - thin / 2.0, plot_width, thin, ORANGE);
+        // The crosshair's place may be off the bottom, when the height is
+        // fitted to shorter versions than the selected one.
+        if overlay.y <= 1.0 {
+            fill_rect(margin, y - thin / 2.0, plot_width, thin, ORANGE);
+        }
         gl.disable(Gl::SCISSOR_TEST);
     }
 }

@@ -31,6 +31,7 @@ mod bundle;
 mod layout;
 mod model;
 mod passage;
+mod scale;
 mod segment;
 mod view;
 pub mod wikipedia;
@@ -42,6 +43,7 @@ pub use model::{
     Author, AuthorId, History, Link, Run, SourceVersion, TokenId, Version, VersionIndex,
 };
 pub use passage::{Passage, passages};
+pub use scale::YScale;
 pub use segment::{Lines, Prose, Segmentation, Segmenter, Sentences};
 pub use view::View;
 

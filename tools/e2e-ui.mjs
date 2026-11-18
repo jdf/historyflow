@@ -334,6 +334,47 @@ try {
     (await view()).join() === "0,1",
   );
 
+  // --- The height can fit what is on screen, and the scale can be
+  // logarithmic; clicks land on the right text under either.
+  const yScale = () => page.evaluate("window.__historyflow.yScale()");
+  await open("?e2e&height=view&view=0,0.25");
+  let scale = await yScale();
+  check(
+    "fitted to the view, the height is that of the longest version on screen",
+    scale[0] > 0.1 && scale[0] < 0.6 && scale[1] === 0,
+    scale,
+  );
+  await page.mouse.click(box.left + box.width - 13, box.top + box.height - 13);
+  at = await cursor();
+  check(
+    "the longest version on screen reaches the bottom of the plot",
+    near(at.y, scale[0], 0.01),
+    { at, scale },
+  );
+  await page.select("#height", "all");
+  await pause(60);
+  check(
+    "the height can be put back to the whole history's",
+    (await yScale()).join() === "1,0",
+  );
+  await open("?e2e&scale=log");
+  scale = await yScale();
+  check("the log scale is on", scale[0] === 1 && scale[1] > 1, scale);
+  await page.mouse.click(box.left + box.width - 13, box.top + box.height / 2);
+  at = await cursor();
+  const expected = (Math.sqrt(1 + scale[1]) - 1) / scale[1];
+  check(
+    "on a log scale, half way down the plot is well short of half the text",
+    near(at.y, expected, 0.01) && at.y < 0.3,
+    { at, expected },
+  );
+  link = await markerOnPassage();
+  check(
+    "on a log scale, the marker is on the crosshair's passage",
+    link.ok,
+    link,
+  );
+
   // --- Comparing by lines shows the text as lines.
   await open("?e2e&at=40,0");
   await page.select("#mode", "lines");

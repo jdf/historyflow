@@ -95,6 +95,10 @@ Tests never touch the network: `core` tests use a canned response, and
   with the limits: the whole history at one end, three revisions at the other.
   It is a shader uniform, so zooming and panning redraw without rebuilding
   anything. y always shows the whole document.
+- The vertical scale is `YScale` (core): `top`, the layout y at the plot's
+  bottom (1, or the longest version in view), and `log`, a steepness (0 for
+  linear). It too is a shader uniform; the shader's `curve` must stay the same
+  function as `YScale::down`, which the overlay and picking use.
 - The crosshair's y and the text panel are linked through `passages()`: each
   passage of a version's text carries its y extent on the version's line, and
   `web/app.js` maps between that and the span's position in the scrolled text.

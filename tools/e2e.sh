@@ -26,6 +26,8 @@ CASES=(
   "demo-ui|?e2e"
   "demo-ui-cursor|?e2e&at=30,0.35"
   "demo-zoomed|?no-ui&at=24,0.3&view=0.35,0.2"
+  "demo-fit-view|?no-ui&at=8,0.1&view=0,0.25&height=view"
+  "demo-log|?no-ui&at=30,0.35&scale=log"
 )
 
 tools/build.sh release >/dev/null
