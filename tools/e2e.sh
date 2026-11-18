@@ -24,6 +24,7 @@ CASES=(
   "demo-age-date|?no-ui&coloring=age&spacing=date"
   "demo-sentences|?no-ui&mode=sentences"
   "demo-ui|?e2e"
+  "demo-ui-cursor|?e2e&at=30,0.35"
 )
 
 tools/build.sh release >/dev/null
@@ -78,6 +79,13 @@ done < <(node tools/e2e.mjs "$CHROME" "http://localhost:$PORT/" build \
 # or dead driver shows up as a short shot count.
 if [ "$VERIFIED" -ne "${#CASES[@]}" ]; then
   echo "e2e driver produced $VERIFIED of ${#CASES[@]} shots" >&2
+  FAILED=1
+fi
+# Behaviour the screenshots cannot show: the crosshair, the text panel
+# and the keyboard staying in step.
+if node tools/e2e-ui.mjs "$CHROME" "http://localhost:$PORT/"; then
+  echo "e2e ui OK"
+else
   FAILED=1
 fi
 exit $FAILED

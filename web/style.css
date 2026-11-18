@@ -72,10 +72,15 @@ h2 {
   align-items: baseline;
   gap: 6px;
 }
-#authors .swatch {
+.swatch {
   flex: none;
+  display: inline-block;
   width: 9px;
   height: 9px;
+}
+#authors li.current .name {
+  color: #fff;
+  font-weight: 600;
 }
 #authors .name {
   flex: 1;
@@ -89,6 +94,81 @@ h2 {
   min-width: 0;
   height: 100%;
   display: block;
+  cursor: crosshair;
+  touch-action: none;
+}
+#reader {
+  width: 380px;
+  display: flex;
+  flex-direction: column;
+  background: #111;
+}
+#version {
+  padding: 8px 12px;
+  border-bottom: 1px solid #333;
+}
+#version-nav {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+#version-nav button {
+  padding: 0 6px;
+}
+#version-id {
+  flex: 1;
+  text-align: right;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+}
+#version-who {
+  margin-top: 6px;
+  color: #ddd;
+}
+#version-date {
+  color: #aaa;
+  margin-left: 4px;
+}
+#version-comment {
+  margin-top: 4px;
+  max-height: 5.6em;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+#text-frame {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+#text {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  box-sizing: border-box;
+  padding: 0 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  line-height: 1.5;
+}
+/* Source code keeps its lines whole and scrolls sideways. */
+#text.lines {
+  white-space: pre;
+  overflow-wrap: normal;
+  font:
+    11px/1.45 ui-monospace,
+    monospace;
+}
+/* The place in the text that the plot's horizontal line points at. */
+#marker {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  margin-top: -1px;
+  background: #ff8c1a;
+  pointer-events: none;
 }
 body.dragging #plot {
   outline: 2px dashed #888;
@@ -99,6 +179,7 @@ body.dragging #plot {
 }
 body.no-ui header,
 body.no-ui aside,
+body.no-ui #reader,
 body.no-ui #status {
   display: none;
 }

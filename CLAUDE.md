@@ -78,5 +78,17 @@ temporary directory.
 - `unsafe` is forbidden workspace-wide.
 - Markdown, `web/` and `tools/*.mjs` are formatted by prettier
   (`proseWrap: always`); Rust by rustfmt. Presubmit enforces both.
+- The crosshair's y and the text panel are linked through `passages()`: each
+  passage of a version's text carries its y extent on the version's line, and
+  `web/app.js` maps between that and the span's position in the scrolled text.
+  Behaviour of that kind is tested in `tools/e2e-ui.mjs`, not by screenshots.
 - Any rendering change needs an e2e case in `tools/e2e.sh` and a blessed golden.
   Look at the received image before blessing.
+
+## Planned
+
+Noted by the user for later; not started.
+
+- **Pan and zoom on the plot** with the mouse wheel and trackpad. Zoom acts on
+  the time (x) dimension only, at least at first. Fully zoomed out, the whole
+  history fills the whole window; fully zoomed in, 3 revisions do.

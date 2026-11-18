@@ -151,6 +151,13 @@ impl History {
         &self.texts[self.text[token.0 as usize] as usize]
     }
 
+    /// The weight of the longest version (at least 1): the document
+    /// length that the layout's y = 1 stands for.
+    pub fn tallest(&self) -> u64 {
+        let tallest = self.versions.iter().map(Version::weight).max();
+        tallest.unwrap_or(0).max(1)
+    }
+
     /// The passages `older` and `newer` share, as maximal runs that are
     /// contiguous in both, ordered by position in `newer`. These are the
     /// ribbons between two revision lines. Tokens in neither's links were

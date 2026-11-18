@@ -21,8 +21,43 @@ pub enum Coloring {
 /// Authors per row of the palette texture.
 const PALETTE_WIDTH: usize = 256;
 
-/// Canvas pixels left empty around the plot, per CSS pixel of margin.
-const MARGIN: f32 = 12.0;
+/// CSS pixels left empty around the plot.
+pub const MARGIN: f32 = 12.0;
+
+/// What is drawn over the plot for the selected version.
+pub struct Overlay {
+    /// The crosshair, in layout coordinates.
+    pub x: f32,
+    pub y: f32,
+    /// The x of each version to mark below the plot: those by the
+    /// selected version's author.
+    pub marks: Vec<f32>,
+}
+
+const WHITE: [f32; 3] = [1.0, 1.0, 1.0];
+const ORANGE: [f32; 3] = [1.0, 0.55, 0.1];
+
+/// Fills a rectangle given in pixels with one colour.
+const SOLID_VERTEX_SHADER: &str = "#version 300 es
+layout(location = 0) in vec2 corner;
+uniform vec2 viewport;
+uniform vec4 rect; // x, y, width, height
+void main() {
+    vec2 pixel = rect.xy + corner * rect.zw;
+    gl_Position = vec4(
+        pixel.x / viewport.x * 2.0 - 1.0,
+        1.0 - pixel.y / viewport.y * 2.0,
+        0.0,
+        1.0);
+}";
+
+const SOLID_FRAGMENT_SHADER: &str = "#version 300 es
+precision mediump float;
+uniform vec3 fill;
+out vec4 color;
+void main() {
+    color = vec4(fill, 1.0);
+}";
 
 const VERTEX_SHADER: &str = "#version 300 es
 // A corner of the unit square: x is 0 on the quad's left side and 1 on
@@ -82,6 +117,7 @@ void main() {
 pub struct Renderer {
     gl: Gl,
     program: WebGlProgram,
+    solid: WebGlProgram,
     instances: WebGlBuffer,
     palette: WebGlTexture,
     quads: i32,
@@ -93,7 +129,8 @@ impl Renderer {
             .get_context("webgl2")?
             .ok_or("WebGL2 is not available")?
             .dyn_into()?;
-        let program = link(&gl)?;
+        let program = link(&gl, VERTEX_SHADER, FRAGMENT_SHADER)?;
+        let solid = link(&gl, SOLID_VERTEX_SHADER, SOLID_FRAGMENT_SHADER)?;
 
         let vao = gl.create_vertex_array().ok_or("create_vertex_array")?;
         gl.bind_vertex_array(Some(&vao));
@@ -126,6 +163,7 @@ impl Renderer {
         Ok(Renderer {
             gl,
             program,
+            solid,
             instances,
             palette,
             quads: 0,
@@ -164,7 +202,13 @@ impl Renderer {
         )
     }
 
-    pub fn draw(&self, coloring: Coloring, versions: usize, pixel_ratio: f32) {
+    pub fn draw(
+        &self,
+        coloring: Coloring,
+        versions: usize,
+        pixel_ratio: f32,
+        overlay: Option<&Overlay>,
+    ) {
         let gl = &self.gl;
         let (width, height) = (
             gl.drawing_buffer_width() as f32,
@@ -173,9 +217,6 @@ impl Renderer {
         gl.viewport(0, 0, width as i32, height as i32);
         gl.clear_color(0.0, 0.0, 0.0, 1.0);
         gl.clear(Gl::COLOR_BUFFER_BIT);
-        if self.quads == 0 {
-            return;
-        }
 
         let margin = MARGIN * pixel_ratio;
         let (plot_width, plot_height) = (width - 2.0 * margin, height - 2.0 * margin);
@@ -200,7 +241,44 @@ impl Renderer {
         gl.uniform1i(uniform("palette").as_ref(), 0);
         gl.active_texture(Gl::TEXTURE0);
         gl.bind_texture(Gl::TEXTURE_2D, Some(&self.palette));
-        gl.draw_arrays_instanced(Gl::TRIANGLE_STRIP, 0, 4, self.quads);
+        if self.quads > 0 {
+            gl.draw_arrays_instanced(Gl::TRIANGLE_STRIP, 0, 4, self.quads);
+        }
+
+        let Some(overlay) = overlay else {
+            return;
+        };
+        gl.use_program(Some(&self.solid));
+        let uniform = |name| gl.get_uniform_location(&self.solid, name);
+        gl.uniform2f(uniform("viewport").as_ref(), width, height);
+        let (rect, fill) = (uniform("rect"), uniform("fill"));
+        let fill_rect = |x: f32, y: f32, w: f32, h: f32, color: [f32; 3]| {
+            gl.uniform4f(
+                rect.as_ref(),
+                x.round(),
+                y.round(),
+                w.round().max(1.0),
+                h.round().max(1.0),
+            );
+            gl.uniform3f(fill.as_ref(), color[0], color[1], color[2]);
+            gl.draw_arrays(Gl::TRIANGLE_STRIP, 0, 4);
+        };
+        let thin = pixel_ratio;
+        let dot = 3.0 * pixel_ratio;
+        for &mark in &overlay.marks {
+            let x = margin + mark * plot_width;
+            fill_rect(
+                x - dot / 2.0,
+                height - (margin + dot) / 2.0,
+                dot,
+                dot,
+                WHITE,
+            );
+        }
+        let x = margin + overlay.x * plot_width;
+        let y = margin + overlay.y * plot_height;
+        fill_rect(x - thin / 2.0, margin, thin, plot_height, WHITE);
+        fill_rect(margin, y - thin / 2.0, plot_width, thin, ORANGE);
     }
 }
 
@@ -219,9 +297,9 @@ fn compile(gl: &Gl, kind: u32, source: &str) -> Result<WebGlShader, JsValue> {
     }
 }
 
-fn link(gl: &Gl) -> Result<WebGlProgram, JsValue> {
-    let vertex = compile(gl, Gl::VERTEX_SHADER, VERTEX_SHADER)?;
-    let fragment = compile(gl, Gl::FRAGMENT_SHADER, FRAGMENT_SHADER)?;
+fn link(gl: &Gl, vertex: &str, fragment: &str) -> Result<WebGlProgram, JsValue> {
+    let vertex = compile(gl, Gl::VERTEX_SHADER, vertex)?;
+    let fragment = compile(gl, Gl::FRAGMENT_SHADER, fragment)?;
     let program = gl.create_program().ok_or("create_program")?;
     gl.attach_shader(&program, &vertex);
     gl.attach_shader(&program, &fragment);

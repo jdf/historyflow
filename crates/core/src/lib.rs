@@ -30,6 +30,7 @@ mod attribute;
 mod bundle;
 mod layout;
 mod model;
+mod passage;
 mod segment;
 
 pub use attribute::{Config, HistoryBuilder, Matching, Measure};
@@ -38,6 +39,7 @@ pub use layout::{Layout, Quad, Spacing, author_colors, layout};
 pub use model::{
     Author, AuthorId, History, Link, Run, SourceVersion, TokenId, Version, VersionIndex,
 };
+pub use passage::{Passage, passages};
 pub use segment::{Lines, Prose, Segmentation, Segmenter, Sentences};
 
 /// The crate version, surfaced in the page so a build can be identified.

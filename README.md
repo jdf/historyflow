@@ -31,6 +31,13 @@ The mode is only the bundle's suggestion; the page's **compare** menu switches
 between them. Without `--first-parent`, commits come in `git log` order, which
 interleaves the two sides of a merge by date.
 
+Click or drag on the plot to place the crosshair: the vertical line picks a
+version, the horizontal line a place in it. The panel on the right shows that
+version's text, coloured as in the plot and scrolled to that place, marked by an
+orange line; scrolling the text moves the crosshair in turn. The left and right
+arrow keys step through versions. Dots under the plot mark the other versions by
+the selected version's author.
+
 With no bundle the page shows `web/samples/demo.json`, a synthetic wiki page
 written by `tools/make-sample.py`.
 
@@ -86,6 +93,9 @@ compares a screenshot of each case byte for byte with its approved image in
 `tests/goldens/e2e/`. On a mismatch, compare `build/e2e-received-<name>.png`
 with the golden and run `tools/e2e.sh --bless` if the change is intended. Add
 cases to the `CASES` list in `tools/e2e.sh`.
+
+It then runs `tools/e2e-ui.mjs`, which drives the page (clicks, drags,
+scrolling, keys) and checks that the crosshair and the text panel stay in step.
 
 The approved images are exact only for one Chrome version on one CPU
 architecture. They are blessed on arm64 macOS; CI runs on x86-64 Linux with

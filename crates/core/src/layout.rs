@@ -75,12 +75,7 @@ struct Column {
 pub fn layout(history: &History, spacing: Spacing) -> Layout {
     let versions = history.versions();
     let xs = positions(history, spacing);
-    let tallest = versions
-        .iter()
-        .map(|v| v.weight())
-        .max()
-        .unwrap_or(0)
-        .max(1) as f64;
+    let tallest = history.tallest() as f64;
 
     let mut quads = Vec::new();
     let mut previous: Option<Column> = None;

@@ -41,6 +41,28 @@
         <ol id="authors"></ol>
       </aside>
       <canvas id="plot"></canvas>
+      <section id="reader">
+        <div id="version">
+          <div id="version-nav">
+            <button id="previous" type="button" title="Previous version (←)">
+              ‹
+            </button>
+            <span id="version-number"></span>
+            <button id="next" type="button" title="Next version (→)">›</button>
+            <span id="version-id"></span>
+          </div>
+          <div id="version-who">
+            <span class="swatch" id="version-swatch"></span>
+            <span id="version-author"></span>
+            <span id="version-date"></span>
+          </div>
+          <div id="version-comment"></div>
+        </div>
+        <div id="text-frame">
+          <div id="text"></div>
+          <div id="marker"></div>
+        </div>
+      </section>
     </main>
     <footer id="status"></footer>
     <script src="build-info.js"></script>
