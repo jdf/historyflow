@@ -136,3 +136,26 @@ fn the_bundle_round_trips_through_json() {
         bundle
     );
 }
+
+#[test]
+fn a_history_is_written_as_an_archive_or_as_json_by_its_name() {
+    let dir = repository();
+    let bundle = git_file::read(&dir.path().join("src/b.txt"), &Options::default()).unwrap();
+    let archive = historyflow_core::Archive::from_bundle(&bundle);
+    let packed = dir.path().join("out.hflow");
+    let plain = dir.path().join("out.json");
+    historyflow_cli::write(&archive, &packed).unwrap();
+    historyflow_cli::write(&archive, &plain).unwrap();
+
+    assert!(
+        std::fs::read(&packed)
+            .unwrap()
+            .starts_with(b"historyflow-archive/1\n")
+    );
+    assert!(std::fs::read(&plain).unwrap().starts_with(b"{"));
+    for path in [&packed, &plain] {
+        assert_eq!(historyflow_cli::read(path).unwrap().to_bundle(), bundle);
+    }
+    let missing = historyflow_cli::read(&dir.path().join("nonesuch")).unwrap_err();
+    assert!(missing.to_string().contains("nonesuch"));
+}

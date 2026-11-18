@@ -8,16 +8,15 @@ Research notes on the original are in `docs/research/`.
 
 ## Viewing a file's history
 
-The page shows a _bundle_: one JSON file holding every version of a document,
-written by a data source. The first data source is one file in a git repository:
+The page shows a history file: every version of one document, written by a data
+source. The first data source is one file in a git repository:
 
 ```sh
-cargo run --release -p historyflow-cli -- git-file path/to/file.rs -o file.json
+cargo run --release -p historyflow-cli -- git-file path/to/file.rs -o file.hflow
 ```
 
-Then open the page (`./dev`) and drop `file.json` on it, or use **Open
-bundle…**. The file is followed across renames, and each commit that touched it
-is one version.
+Then open the page (`./dev`) and drop `file.hflow` on it, or use **Open…**. The
+file is followed across renames, and each commit that touched it is one version.
 
 | Option             | Effect                                                                                |
 | ------------------ | ------------------------------------------------------------------------------------- |
@@ -27,7 +26,7 @@ is one version.
 | `--first-parent`   | Follow only the mainline; a merged branch appears as one version at its merge.        |
 | `--max-versions N` | Keep only the most recent N versions.                                                 |
 
-The mode is only the bundle's suggestion; the page's **compare** menu switches
+The mode is only the file's suggestion; the page's **compare** menu switches
 between them. Without `--first-parent`, commits come in `git log` order, which
 interleaves the two sides of a merge by date.
 
@@ -56,7 +55,7 @@ Two menus set the vertical scale, independently of each other:
   drawn nearly in proportion and the rest progressively squeezed, so a version
   many times the usual length takes only a few times the usual height.
 
-With no bundle the page shows `web/samples/demo.json`, a synthetic wiki page
+With no file the page shows `web/samples/demo.hflow`, a synthetic wiki page
 written by `tools/make-sample.py`.
 
 ## Viewing a Wikipedia article's history
@@ -70,11 +69,48 @@ article's first, and draws the history as it arrives; **Stop** ends the fetch
 early. Editors without an account are drawn in white and greys. A revision whose
 text the wiki's administrators have hidden is skipped.
 
-**Save** writes whatever is loaded as a bundle, so that a history fetched once
-can be opened again without asking the wiki.
+**Save** writes whatever is loaded as an archive (see below), so that a history
+fetched once can be opened again without asking the wiki.
 
-Every revision's full text is held in memory, so a long history of a long
-article is heavy: 500 revisions of a 50 KB article is 25 MB.
+## History files
+
+A history file is one of two kinds, and the page and the command read either.
+
+An **archive** (`.hflow`) holds only what each version changed, and is what the
+command and **Save** write:
+
+- Each distinct chunk of text (a word, a run of spaces, a punctuation mark, a
+  line break) is stored once, however often it occurs.
+- A version is a list of instructions for making its chunks out of an earlier
+  version's: copy this stretch, insert these. The earlier version is usually the
+  one before; it is the one before that when that is closer (two authors
+  alternating), and any earlier version that was exactly the same (a page
+  restored after vandalism), which costs a few bytes.
+- The whole is then deflated.
+
+Every version's text comes back byte for byte, and nothing about authorship is
+stored: the page works that out from the text, in whichever comparison is
+chosen. The page keeps the loaded history in the same form, so its memory is the
+size of the changes, not of the versions.
+
+| History                                    | Versions | Text in all versions | Archive |
+| ------------------------------------------ | -------- | -------------------- | ------- |
+| Wikipedia's Chocolate, first 500 revisions | 500      | 7.66 MB              | 45 KB   |
+| A 90 KB JavaScript file in git             | 44       | 2.09 MB              | 55 KB   |
+| The demo                                   | 54       | 232 KB               | 3 KB    |
+
+A **bundle** (`.json`) is the same history as plain JSON, every version's text
+written out: easy to write from a script and to read, and as large as the texts
+together. Its fields are `format` (`"historyflow-bundle/1"`), `title`, `mode`
+and `versions`, each version having `id`, `author`, `anonymous`, `timestamp`
+(seconds since 1970), `comment` and `text`.
+
+```sh
+historyflow convert history.json -o history.hflow   # and the other way round
+```
+
+`cargo run --release -p historyflow-core --example replay file.hflow` times
+reading a file and working out its authorship in each mode.
 
 ## Layout
 

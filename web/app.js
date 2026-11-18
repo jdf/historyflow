@@ -1,9 +1,10 @@
-// Page glue: loads the wasm module, fetches or reads a bundle, and wires
+// Page glue: loads the wasm module, fetches or reads a history file, and wires
 // the controls, the plot's crosshair and the text panel together.
 // Vanilla JS, no bundler; pkg/ is wasm-bindgen output.
 //
 // URL parameters, all optional:
-//   src       bundle to load (default: the demo)
+//   src       history file to load, an archive or a bundle (default: the
+//             demo)
 //   wiki      instead of src: a Wikipedia article, by title or address,
 //             whose history to fetch
 //   limit     with wiki: how many revisions to fetch (default 500)
@@ -12,7 +13,7 @@
 //   height    all | view — whether the plot is as tall as the longest
 //             version of the whole history, or of those on screen
 //   scale     linear | log
-//   mode      lines | prose | sentences (default: the bundle's own)
+//   mode      lines | prose | sentences (default: the file's own)
 //   at        version,y — where the crosshair starts (default: the last
 //             version, at its top); y is a fraction of the plot's height
 //   view      start,width — the part of the history on screen, in
@@ -352,7 +353,7 @@ function showSummary() {
   }
 }
 
-// Loads bundle text, in the given mode or (if empty) the bundle's own,
+// Loads a history file's bytes, in the given mode or (if empty) the file's own,
 // and puts the crosshair on version `at[0]` at y `at[1]`.
 function load(source, mode, at) {
   if (loading) loading.stopped = true;
@@ -448,7 +449,7 @@ function report(error) {
 
 async function readFile(file) {
   try {
-    load(await file.text(), "", []);
+    load(new Uint8Array(await file.arrayBuffer()), "", []);
   } catch (error) {
     report(error);
   }
@@ -469,11 +470,12 @@ try {
     // Not awaited: the history shows as it arrives.
     loadWikipedia(params.get("wiki"), Number(params.get("limit")) || 500);
   } else {
-    const source = params.get("src") ?? "samples/demo.json";
+    const source = params.get("src") ?? "samples/demo.hflow";
     const response = await fetch(source);
     if (!response.ok) throw new Error(`${source}: HTTP ${response.status}`);
     const at = (params.get("at") ?? "").split(",").filter(Boolean).map(Number);
-    load(await response.text(), params.get("mode") ?? "", at);
+    const file = new Uint8Array(await response.arrayBuffer());
+    load(file, params.get("mode") ?? "", at);
     if (params.has("view")) {
       app.set_view(...params.get("view").split(",").map(Number));
       // A link opens at rest on its view, not easing into it.
@@ -543,14 +545,14 @@ try {
     loading = null;
     showSummary();
   };
-  // Saves what is loaded as a bundle, so a history fetched once need not
-  // be fetched again.
+  // Saves what is loaded as an archive, so a history fetched once need
+  // not be fetched again.
   $("save").onclick = () => {
     const link = document.createElement("a");
     link.href = URL.createObjectURL(
-      new Blob([app.bundle()], { type: "application/json" }),
+      new Blob([app.archive()], { type: "application/octet-stream" }),
     );
-    link.download = `${summary.title.replace(/[^\p{L}\p{N}]+/gu, "-")}.json`;
+    link.download = `${summary.title.replace(/[^\p{L}\p{N}]+/gu, "-")}.hflow`;
     link.click();
     URL.revokeObjectURL(link.href);
   };
@@ -558,7 +560,7 @@ try {
   $("file").onchange = (event) => {
     if (event.target.files[0]) readFile(event.target.files[0]);
   };
-  // A bundle can also be dropped anywhere on the page.
+  // A history file can also be dropped anywhere on the page.
   window.ondragover = (event) => {
     event.preventDefault();
     document.body.classList.add("dragging");

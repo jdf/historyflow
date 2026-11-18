@@ -32,7 +32,7 @@ else
 fi
 
 DIST="$PWD/build/release/dist"
-for f in index.html app.js style.css build-info.js samples/demo.json \
+for f in index.html app.js style.css build-info.js samples/demo.hflow \
          pkg/historyflow_web.js pkg/historyflow_web_bg.wasm; do
   if [ ! -f "$DIST/$f" ]; then
     echo "deploy: $DIST/$f missing after build" >&2

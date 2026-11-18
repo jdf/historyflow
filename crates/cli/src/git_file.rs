@@ -26,7 +26,7 @@ pub struct Options {
     pub mode: Mode,
 }
 
-pub type Error = Box<dyn std::error::Error>;
+pub use crate::Error;
 
 /// Separates commits, and fields within a commit, in `git log` output.
 /// Neither can occur in a commit message git accepts as text.

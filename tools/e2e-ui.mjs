@@ -575,15 +575,47 @@ try {
     "Stop goes away when the fetch ends",
     await wiki.evaluate(() => document.getElementById("stop").hidden),
   );
-  const saved = JSON.parse(
-    await wiki.evaluate("window.__historyflowApp.bundle()"),
-  );
+  // Saved, and loaded back from what was saved.
+  const reloaded = await wiki.evaluate(() => {
+    const app = window.__historyflowApp;
+    const file = app.archive();
+    const magic = new TextDecoder().decode(file.slice(0, 22));
+    const summary = JSON.parse(app.load(file, ""));
+    return {
+      magic,
+      bytes: file.length,
+      summary,
+      last: JSON.parse(app.version_detail(4)),
+    };
+  });
   check(
-    "what was fetched can be saved as a bundle",
-    saved.format === "historyflow-bundle/1" &&
-      saved.title === "Chocolate" &&
-      saved.versions.length === 5,
-    saved.format,
+    "what was fetched can be saved as an archive and loaded back",
+    reloaded.magic === "historyflow-archive/1\n" &&
+      reloaded.summary.title === "Chocolate" &&
+      reloaded.summary.versions === 5 &&
+      reloaded.summary.mode === "prose" &&
+      reloaded.last.passages.map((passage) => passage[0]).join("") ===
+        "Chocolate is a sweet brown food. It melts.",
+    reloaded,
+  );
+  const fromJson = await wiki.evaluate(() => {
+    const bundle = {
+      format: "historyflow-bundle/1",
+      title: "From JSON",
+      mode: "lines",
+      versions: [
+        { id: "1", author: "ada", timestamp: 5, comment: "", text: "a\nb\n" },
+      ],
+    };
+    const file = new TextEncoder().encode(JSON.stringify(bundle));
+    return JSON.parse(window.__historyflowApp.load(file, ""));
+  });
+  check(
+    "a bundle's JSON still loads",
+    fromJson.title === "From JSON" &&
+      fromJson.versions === 1 &&
+      fromJson.mode === "lines",
+    fromJson,
   );
   await wiki.close();
 

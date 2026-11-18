@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Writes web/samples/demo.json: a synthetic wiki-style history that shows
+"""Writes web/samples/demo.hflow: a synthetic wiki-style history that shows
 each pattern the visualization exists to reveal. It is the page's default
 document and the subject of the e2e goldens.
 
 The history is generated from a fixed seed, so the output is the same on
-every run; it is committed, and this script is how it was made.
+every run; it is committed, and this script is how it was made. It
+writes the history as a bundle and has the historyflow command convert
+that to an archive.
 
     growth        several authors adding paragraphs over time
     anonymous     two authors with no account (drawn in greys)
@@ -15,6 +17,8 @@ every run; it is committed, and this script is how it was made.
 """
 import json
 import random
+import subprocess
+import tempfile
 from pathlib import Path
 
 rng = random.Random(2004)
@@ -110,6 +114,13 @@ bundle = {
     "mode": "prose",
     "versions": versions,
 }
-out = Path(__file__).resolve().parent.parent / "web" / "samples" / "demo.json"
-out.write_text(json.dumps(bundle, indent=1) + "\n")
-print(f"{out}: {len(versions)} versions")
+root = Path(__file__).resolve().parent.parent
+out = root / "web" / "samples" / "demo.hflow"
+with tempfile.TemporaryDirectory() as scratch:
+    plain = Path(scratch) / "demo.json"
+    plain.write_text(json.dumps(bundle))
+    subprocess.run(
+        ["cargo", "run", "--quiet", "--release", "-p", "historyflow-cli", "--",
+         "convert", str(plain), "-o", str(out)],
+        cwd=root, check=True,
+    )

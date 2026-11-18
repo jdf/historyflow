@@ -26,6 +26,7 @@
 //! See `docs/research/history-flow.md` §7 for why attribution and
 //! alignment are both derived from token identity.
 
+mod archive;
 mod attribute;
 mod bundle;
 mod layout;
@@ -36,6 +37,7 @@ mod segment;
 mod view;
 pub mod wikipedia;
 
+pub use archive::Archive;
 pub use attribute::{Config, HistoryBuilder, Matching, Measure};
 pub use bundle::{Bundle, Mode};
 pub use layout::{Layout, Quad, Spacing, author_colors, layout};

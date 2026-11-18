@@ -4,7 +4,7 @@
 mod renderer;
 
 use historyflow_core::{
-    Bundle, History, HistoryBuilder, Mode, SourceVersion, Spacing, VersionIndex, View, YScale,
+    Archive, History, HistoryBuilder, Mode, SourceVersion, Spacing, VersionIndex, View, YScale,
     author_colors, layout, passages, wikipedia,
 };
 use serde::Serialize;
@@ -28,8 +28,9 @@ pub fn version() -> String {
 #[wasm_bindgen]
 pub struct App {
     renderer: Renderer,
-    /// The loaded bundle; its versions' text is what the text panel shows.
-    bundle: Bundle,
+    /// Every version's text, compactly: what the history is built from,
+    /// what the text panel shows, and what is saved.
+    archive: Archive,
     mode: Mode,
     /// Holds the history, and can add versions to it as a source that
     /// arrives in batches delivers them.
@@ -107,7 +108,7 @@ impl App {
     pub fn new(canvas: &HtmlCanvasElement) -> Result<App, JsValue> {
         Ok(App {
             renderer: Renderer::new(canvas)?,
-            bundle: Bundle::new("", Mode::default(), Vec::new()),
+            archive: Archive::default(),
             mode: Mode::default(),
             builder: HistoryBuilder::new(Mode::default().config()),
             spacing: Spacing::default(),
@@ -124,20 +125,16 @@ impl App {
         })
     }
 
-    /// Loads a bundle (the JSON a data source wrote) and returns a JSON
-    /// summary of it. `mode` is `lines`, `prose` or `sentences`, or empty
-    /// to use the one the bundle suggests.
-    pub fn load(&mut self, bundle: &str, mode: &str) -> Result<String, JsValue> {
-        let bundle: Bundle =
-            serde_json::from_str(bundle).map_err(|e| format!("not a history flow bundle: {e}"))?;
-        if bundle.format != Bundle::FORMAT {
-            return Err(format!("unsupported bundle format {:?}", bundle.format).into());
-        }
+    /// Loads a history from the bytes of a file, an archive or a
+    /// bundle, and returns a JSON summary of it. `mode` is `lines`,
+    /// `prose` or `sentences`, or empty to use the one the file suggests.
+    pub fn load(&mut self, file: &[u8], mode: &str) -> Result<String, JsValue> {
+        let archive = Archive::read(file)?;
         let mode = match mode {
-            "" => bundle.mode,
+            "" => archive.mode,
             name => parse_mode(name)?,
         };
-        self.bundle = bundle;
+        self.archive = archive;
         self.rebuild(mode)
     }
 
@@ -149,8 +146,8 @@ impl App {
 
     /// Starts an empty history, to be filled by [`App::add_wikipedia`].
     pub fn begin(&mut self, title: &str, mode: &str) -> Result<(), JsValue> {
-        self.bundle = Bundle::new(title, parse_mode(mode)?, Vec::new());
-        self.rebuild(self.bundle.mode).map(drop)
+        self.archive = Archive::new(title, parse_mode(mode)?);
+        self.rebuild(self.archive.mode).map(drop)
     }
 
     /// Adds the revisions in one response of the MediaWiki API to the
@@ -158,14 +155,14 @@ impl App {
     /// the next batch, or nothing if this was the last.
     pub fn add_wikipedia(&mut self, response: &str) -> Result<Option<String>, JsValue> {
         let batch = wikipedia::parse(response)?;
-        self.bundle.title = batch.title;
+        self.archive.title = batch.title;
         self.add(batch.versions)?;
         Ok(batch.next)
     }
 
-    /// The loaded history as a bundle, to save.
-    pub fn bundle(&self) -> String {
-        serde_json::to_string(&self.bundle).expect("serializable")
+    /// The loaded history as the bytes of an archive file, to save.
+    pub fn archive(&self) -> Vec<u8> {
+        self.archive.to_bytes()
     }
 
     /// What the page needs to know about the loaded history, as JSON.
@@ -190,7 +187,7 @@ impl App {
             })
             .collect();
         let summary = Summary {
-            title: &self.bundle.title,
+            title: &self.archive.title,
             mode: self.mode.name(),
             versions: history.versions().len(),
             tokens: history.token_count(),
@@ -284,7 +281,8 @@ impl App {
     pub fn version_detail(&self, version: u32) -> Result<String, JsValue> {
         let found = self.history().versions().get(version as usize);
         let found = found.ok_or_else(|| format!("no version {version}"))?;
-        let text = self.bundle.versions[version as usize].text.as_str();
+        let text = self.archive.text(version as usize);
+        let text = text.as_str();
         let segmenter = self.mode.config().segmenter;
         let detail = Detail {
             index: version,
@@ -423,12 +421,12 @@ impl App {
         }
     }
 
-    /// Builds the history again from the bundle's versions.
+    /// Builds the history again from the archive's versions.
     fn rebuild(&mut self, mode: Mode) -> Result<String, JsValue> {
         self.mode = mode;
         self.builder = HistoryBuilder::new(mode.config());
-        for version in &self.bundle.versions {
-            self.builder.push(version);
+        for version in self.archive.versions() {
+            self.builder.push(&version);
         }
         self.cursor = None;
         self.shown = None;
@@ -437,12 +435,13 @@ impl App {
         Ok(self.summary())
     }
 
-    /// Appends versions to the history and the bundle.
+    /// Appends versions to the history and the archive. Their text is
+    /// not otherwise kept.
     fn add(&mut self, versions: Vec<SourceVersion>) -> Result<(), JsValue> {
         for version in &versions {
             self.builder.push(version);
+            self.archive.push(version);
         }
-        self.bundle.versions.extend(versions);
         self.upload()
     }
 

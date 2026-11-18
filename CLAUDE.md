@@ -53,15 +53,29 @@ between consecutive versions. Colour is not in the geometry: a quad carries its
 author and its age, and the shader picks the colour, so changing the colouring
 never rebuilds anything.
 
-A `Bundle` is the JSON file a data source writes and the page reads: title,
-suggested `Mode`, and the `SourceVersion`s with full text.
+An `Archive` is how a history is held and stored: the `SourceVersion`s, with
+title and suggested `Mode`, kept as deltas. Each distinct chunk of text is
+stored once, and each version is copy/insert instructions against an earlier one
+(the previous, the one before it, or an identical earlier version). It is
+lossless and knows nothing of authorship: it is read back into text, which a
+`HistoryBuilder` then attributes. `to_bytes`/`from_bytes` are the `.hflow` file
+(the same instructions, deflated); `from_bytes` trusts nothing in the file.
+
+A `Bundle` is the same history as plain JSON with every version's text written
+out. Sources produce one; `Archive::read` accepts either kind of file.
+
+Why storage and attribution are separate: stored token identities would tie
+files to one comparison mode and to the attribution algorithm as it stood when
+they were written. Re-attributing is cheap (40 ms natively for 500 revisions of
+a Wikipedia article); `--example replay` measures it.
 
 ## Data sources (`crates/cli`)
 
 Sources that cannot run in a browser are subcommands of the `historyflow`
-binary, one module each, and write a bundle. `git_file` shells out to `git`
-(`log --follow`, `cat-file --batch`); its tests build a real repository in a
-temporary directory.
+binary, one module each, and produce a bundle, which the command writes as an
+archive (or as JSON, if the output is named `.json`). `git_file` shells out to
+`git` (`log --follow`, `cat-file --batch`); its tests build a real repository in
+a temporary directory.
 
 ## The Wikipedia source
 
@@ -110,14 +124,3 @@ Tests never touch the network: `core` tests use a canned response, and
   Behaviour of that kind is tested in `tools/e2e-ui.mjs`, not by screenshots.
 - Any rendering change needs an e2e case in `tools/e2e.sh` and a blessed golden.
   Look at the received image before blessing.
-
-## Planned
-
-Noted by the user for later; not started.
-
-- **A compact representation of a history.** Bundles carry every version's full
-  text, which will not scale. Design the minimal form from which the history can
-  be reconstructed: deltas only. The producer could be a command-line app, a
-  desktop app, or a website; its input may be very large (the whole history of a
-  software repository, or of a Wikipedia article). To be designed, not yet
-  specified further.
