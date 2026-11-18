@@ -342,7 +342,11 @@ impl App {
         let scale = match self.shown {
             // The time since the last frame counts only if that frame was
             // part of this movement.
-            Some(shown) if self.easing => shown.eased_toward(target, (now - self.drawn_at) as f32),
+            // …and a frame that took long counts as a short one, so that a
+            // hitch slows the movement and does not skip it.
+            Some(shown) if self.easing => {
+                shown.eased_toward(target, ((now - self.drawn_at) as f32).min(50.0))
+            }
             Some(shown) => shown.eased_toward(target, 0.0),
             None => target,
         };

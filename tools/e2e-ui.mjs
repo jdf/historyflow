@@ -26,10 +26,31 @@ function check(what, ok, got) {
 const near = (a, b, tolerance) => Math.abs(a - b) <= tolerance;
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// Checks something that follows from an event the page handles in its own
+// time (a scroll, an animation frame): looks until it is so, and fails
+// only if it still is not after five seconds. Never a fixed wait — how
+// long the page takes depends on the machine. Returns what it last saw.
+async function eventually(what, look, ok) {
+  const deadline = Date.now() + 5000;
+  for (;;) {
+    const got = await look();
+    if (ok(got)) return got;
+    if (Date.now() > deadline) {
+      check(what, false, got);
+      return got;
+    }
+    await pause(20);
+  }
+}
+
 try {
   const page = await browser.newPage();
   await page.setViewport({ width: 1200, height: 750, deviceScaleFactor: 1 });
   page.on("pageerror", (e) => check(`no uncaught errors: ${e.message}`, false));
+  // E2E_SLOW=6 runs the page as on a machine six times slower, to shake
+  // out anything that depends on timing.
+  if (process.env.E2E_SLOW)
+    await page.emulateCPUThrottling(Number(process.env.E2E_SLOW));
 
   async function open(query) {
     await page.goto(baseUrl + query, { waitUntil: "load" });
@@ -87,43 +108,37 @@ try {
   check("the marker is on the passage under the crosshair", link.ok, link);
 
   // --- Scrolling the text moves the crosshair down the same version.
-  const scrollTo = async (fraction) => {
-    await page.evaluate((fraction) => {
+  const scrollTo = (fraction) =>
+    page.evaluate((fraction) => {
       const el = document.getElementById("text");
       el.scrollTop = (el.scrollHeight - el.clientHeight) * fraction;
     }, fraction);
-    await pause(100);
-  };
   const end = await page.evaluate(
     () => window.__historyflow.detail().passages.at(-1)[4],
   );
   await scrollTo(1);
-  at = await cursor();
-  check(
+  at = await eventually(
     "scrolled to the end, the crosshair is at the version's end",
-    near(at.y, end, 0.01),
-    at,
+    cursor,
+    (at) => near(at.y, end, 0.01),
   );
   check("scrolling keeps the version", at.version === 30, at);
   await scrollTo(0);
-  at = await cursor();
-  check(
+  await eventually(
     "scrolled to the start, the crosshair is at the top",
-    near(at.y, 0, 0.01),
-    at,
+    cursor,
+    (at) => near(at.y, 0, 0.01),
   );
   await scrollTo(0.5);
-  link = await markerOnPassage();
-  check(
-    "after scrolling, the marker is still on the crosshair's passage",
-    link.ok,
-    link,
-  );
-  const middle = (await cursor()).y;
-  check(
+  await eventually(
     "scrolled half way, the crosshair is inside the version",
-    middle > 0.02 && middle < end - 0.02,
-    middle,
+    cursor,
+    (at) => at.y > 0.02 && at.y < end - 0.02,
+  );
+  await eventually(
+    "after scrolling, the marker is still on the crosshair's passage",
+    markerOnPassage,
+    (link) => link.ok,
   );
 
   // --- The keyboard steps through versions, keeping the position.
@@ -351,47 +366,47 @@ try {
     near(at.y, scale[0], 0.01),
     { at, scale },
   );
-  // The scale eases to a new height: part of the way at first, then there.
-  const atRest = async () => {
+  // The scale eases to a new height: through values in between, then
+  // exactly there. Watches it all the way, however fast or slow the
+  // frames come.
+  const watchScale = async (until) => {
+    const seen = [];
     const deadline = Date.now() + 5000;
-    while (await page.evaluate("window.__historyflow.moving()")) {
-      if (Date.now() > deadline)
-        throw new Error("the scale never came to rest");
-      await pause(30);
+    for (;;) {
+      seen.push((await yScale())[0]);
+      const moving = await page.evaluate("window.__historyflow.moving()");
+      if ((until(seen.at(-1)) && !moving) || Date.now() > deadline) return seen;
+      await pause(4);
     }
   };
+  const between = (low, high) => (v) => v > low + 1e-4 && v < high - 1e-4;
   await page.select("#height", "all");
-  await pause(50);
-  const easing = (await yScale())[0];
+  let tops = await watchScale((top) => top === 1);
   check(
     "a change of height eases; it does not snap",
-    easing > scale[0] && easing < 1,
-    easing,
+    tops.some(between(scale[0], 1)),
+    tops,
   );
-  await atRest();
   check(
     "and comes to rest at the whole history's height",
-    (await yScale()).join() === "1,0",
+    tops.at(-1) === 1,
+    tops,
   );
   await page.select("#height", "view");
-  await atRest();
-  check(
-    "and back at the view's",
-    near((await yScale())[0], scale[0], 1e-6),
-    await yScale(),
-  );
+  tops = await watchScale((top) => near(top, scale[0], 1e-6));
+  check("and eases back to the view's", tops.some(between(scale[0], 1)), tops);
+  check("where it rests", near(tops.at(-1), scale[0], 1e-6), tops);
   await wheel(12 + plotWidth / 2, { deltaY: 3000 });
-  const zooming = (await yScale())[0];
+  tops = await watchScale((top) => top === 1);
   check(
     "zooming out eases the height as the view grows",
-    zooming > scale[0] && zooming < 1,
-    zooming,
+    tops.some(between(scale[0], 1)),
+    tops,
   );
-  await atRest();
   check(
     "and rests at the longest version now in view",
-    (await yScale())[0] === 1,
-    await yScale(),
+    tops.at(-1) === 1,
+    tops,
   );
   await open("?e2e&scale=log");
   scale = await yScale();

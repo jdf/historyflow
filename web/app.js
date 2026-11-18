@@ -56,9 +56,12 @@ let cursor = { version: 0, y: 0 };
 // its top and height within the scrolled content.
 let spans = [];
 let boxes = null;
-// Set when the panel is scrolled by the page itself, so the scroll event
-// that follows is not mistaken for the reader scrolling.
-let scrolledByPage = false;
+// Where the page itself last scrolled the panel to, until the scroll
+// event for it arrives, so that event is not mistaken for the reader
+// scrolling. A position, not a flag: if the reader scrolls before the
+// event is delivered, one event reports both, and the position it reports
+// is the reader's.
+let pageScrolledTo = null;
 
 function draw() {
   const ratio = window.devicePixelRatio || 1;
@@ -268,7 +271,7 @@ function scrollTextTo(y) {
   const range = scrollRange();
   const before = text.scrollTop;
   text.scrollTop = range > 0 ? (offset * range) / text.scrollHeight : 0;
-  if (text.scrollTop !== before) scrolledByPage = true;
+  if (text.scrollTop !== before) pageScrolledTo = text.scrollTop;
   marker.style.top = `${Math.round(offset - text.scrollTop)}px`;
 }
 
@@ -276,10 +279,10 @@ function onTextScroll() {
   const range = scrollRange();
   const down = range > 0 ? (text.scrollTop / range) * text.clientHeight : 0;
   marker.style.top = `${Math.round(down)}px`;
-  if (scrolledByPage) {
-    scrolledByPage = false;
-    return;
-  }
+  const byPage =
+    pageScrolledTo !== null && Math.abs(text.scrollTop - pageScrolledTo) < 1;
+  pageScrolledTo = null;
+  if (byPage) return;
   if (range === 0) return;
   select(
     cursor.version,
