@@ -36,6 +36,18 @@ more or fewer. This is the one case where something is fetched: your browser
 asks the wiki for the history, as described under
 [Viewing a Wikipedia article's history](#viewing-a-wikipedia-articles-history).
 
+Add `-o FILE` and the command fetches the history itself (with `curl`) and
+writes it as a history file, opening nothing; `historyflow FILE` then shows it
+without asking the wiki again:
+
+```sh
+historyflow --wikipedia Chocolate --revisions 2000 -o chocolate.hflow
+historyflow chocolate.hflow
+```
+
+If the wiki says it is being asked too fast, the command waits as long as the
+wiki asks and carries on.
+
 `--no-open` prints the address without opening a browser, `--port` picks the
 port, and `--first-parent` follows only the mainline of merges. The server
 listens only on this machine, and refuses requests that were not addressed to it

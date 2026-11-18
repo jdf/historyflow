@@ -4,6 +4,7 @@
 
 pub mod git_file;
 pub mod serve;
+pub mod wikipedia;
 
 use std::path::Path;
 

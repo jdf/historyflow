@@ -4,7 +4,7 @@ use std::process::ExitCode;
 
 use clap::{Parser, Subcommand, ValueEnum};
 use historyflow_cli::serve::{self, Subject};
-use historyflow_cli::{Error, git_file};
+use historyflow_cli::{Error, git_file, wikipedia};
 use historyflow_core::{Archive, Mode};
 
 /// Shows how a document came to be, version by version: who wrote what,
@@ -16,7 +16,8 @@ use historyflow_core::{Archive, Mode};
 /// fetched from anywhere else.
 ///
 /// With --wikipedia, opens the viewer on an article's history instead,
-/// which your browser fetches from the wiki.
+/// which your browser fetches from the wiki. Add --output to fetch it
+/// here and write it to a history file, opening nothing.
 ///
 /// History files are written as archives (.hflow), which hold only what
 /// each version changed, unless the name given ends in .json: then as a
@@ -36,6 +37,11 @@ struct Cli {
     /// article's first.
     #[arg(long, value_name = "N", default_value_t = 500, requires = "wikipedia")]
     revisions: u32,
+    /// With --wikipedia: fetch the history now and write it to this
+    /// file, instead of opening the viewer. Open the file later with
+    /// `historyflow FILE`, and nothing is asked of the wiki again.
+    #[arg(short, long, value_name = "FILE", requires = "wikipedia")]
+    output: Option<PathBuf>,
     /// The port to serve on; another is chosen if it is taken.
     #[arg(long, default_value_t = 8793)]
     port: u16,
@@ -103,6 +109,29 @@ fn main() -> ExitCode {
 
 fn run(cli: Cli) -> Result<(), Error> {
     let Some(command) = cli.command else {
+        if let (Some(article), Some(output)) = (&cli.wikipedia, &cli.output) {
+            if cli.revisions == 0 {
+                return Err("there is nothing to write in no revisions".into());
+            }
+            let get = |url: &str| {
+                wikipedia::curl(url, |seconds| {
+                    eprint!("\rthe wiki asks for a pause of {seconds} seconds…");
+                })
+            };
+            let archive = wikipedia::read(article, cli.revisions, get, |read| {
+                // The spaces overwrite a longer line about a pause.
+                eprint!("\r{read} revisions{:40}", "");
+            });
+            // End the line of progress, whatever came of it.
+            eprintln!();
+            let archive = archive?;
+            if archive.is_empty() {
+                return Err(
+                    format!("{}: the wiki has no readable revisions", archive.title).into(),
+                );
+            }
+            return write(&archive, output);
+        }
         let subject = match &cli.wikipedia {
             Some(article) => Subject::wikipedia(article, cli.revisions)?,
             None => Subject::at(&cli.path, cli.first_parent)?,

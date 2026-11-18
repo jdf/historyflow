@@ -80,7 +80,10 @@ a Wikipedia article); `--example replay` measures it.
 browser; `PATH` is a git repository, a file in one, or a history file.
 `historyflow --wikipedia ARTICLE [--revisions N]` serves it on a Wikipedia
 article instead: the command fetches nothing itself, and only tells the page (in
-`api/session`) which article to fetch and how much of it.
+`api/session`) which article to fetch and how much of it. With `-o FILE` it
+serves nothing: `cli::wikipedia` fetches the history by running `curl` (as
+`git_file` runs `git`, and to keep TLS out of the build) and writes an archive.
+Its `read` takes the fetching as a function, which is what the tests supply.
 
 - The viewer is inside the binary: `build.rs` embeds `build/release/dist` as it
   is when the command is compiled (an empty list if it has not been built, in
