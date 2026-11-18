@@ -99,6 +99,11 @@ Tests never touch the network: `core` tests use a canned response, and
   bottom (1, or the longest version in view), and `log`, a steepness (0 for
   linear). It too is a shader uniform; the shader's `curve` must stay the same
   function as `YScale::down`, which the overlay and picking use.
+- The scale's `top` eases toward its target (`YScale::eased_toward`):
+  `App::draw` takes the time and returns whether it is still moving, and the
+  page keeps drawing until it is not. Picking and the overlay use the scale as
+  drawn, mid-ease included. A newly loaded history, a link with `view=`, and a
+  reader who prefers reduced motion all start at rest (`App::settle`).
 - The crosshair's y and the text panel are linked through `passages()`: each
   passage of a version's text carries its y extent on the version's line, and
   `web/app.js` maps between that and the span's position in the scrolled text.

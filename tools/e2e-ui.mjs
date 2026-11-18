@@ -351,11 +351,47 @@ try {
     near(at.y, scale[0], 0.01),
     { at, scale },
   );
+  // The scale eases to a new height: part of the way at first, then there.
+  const atRest = async () => {
+    const deadline = Date.now() + 5000;
+    while (await page.evaluate("window.__historyflow.moving()")) {
+      if (Date.now() > deadline)
+        throw new Error("the scale never came to rest");
+      await pause(30);
+    }
+  };
   await page.select("#height", "all");
-  await pause(60);
+  await pause(50);
+  const easing = (await yScale())[0];
   check(
-    "the height can be put back to the whole history's",
+    "a change of height eases; it does not snap",
+    easing > scale[0] && easing < 1,
+    easing,
+  );
+  await atRest();
+  check(
+    "and comes to rest at the whole history's height",
     (await yScale()).join() === "1,0",
+  );
+  await page.select("#height", "view");
+  await atRest();
+  check(
+    "and back at the view's",
+    near((await yScale())[0], scale[0], 1e-6),
+    await yScale(),
+  );
+  await wheel(12 + plotWidth / 2, { deltaY: 3000 });
+  const zooming = (await yScale())[0];
+  check(
+    "zooming out eases the height as the view grows",
+    zooming > scale[0] && zooming < 1,
+    zooming,
+  );
+  await atRest();
+  check(
+    "and rests at the longest version now in view",
+    (await yScale())[0] === 1,
+    await yScale(),
   );
   await open("?e2e&scale=log");
   scale = await yScale();

@@ -37,6 +37,24 @@ impl YScale {
         8.0 / lengths[lengths.len() / 2]
     }
 
+    /// One step of easing the scale toward `target`, `elapsed`
+    /// milliseconds after the last: the top closes a fixed share of the
+    /// remaining gap per unit of time, in proportion (halving takes as
+    /// long as doubling), and lands exactly once it is within a
+    /// thousandth. The steepness is not eased; it takes `target`'s.
+    pub fn eased_toward(self, target: YScale, elapsed: f32) -> YScale {
+        /// Milliseconds for the gap to shrink by a factor of e.
+        const PACE: f32 = 90.0;
+        let gap = (target.top / self.top).ln();
+        let remaining = gap * (-elapsed.max(0.0) / PACE).exp();
+        let top = if remaining.abs() < 1e-3 || !remaining.is_finite() {
+            target.top
+        } else {
+            target.top / remaining.exp()
+        };
+        YScale { top, ..target }
+    }
+
     fn curve(self, y: f32) -> f32 {
         if self.log > 0.0 {
             (self.log * y).ln_1p()
@@ -130,6 +148,29 @@ mod tests {
             }
             assert!(close(scale.down(scale.top), 1.0));
         }
+    }
+
+    #[test]
+    fn easing_closes_the_gap_in_proportion_and_then_lands() {
+        let from = YScale { top: 1.0, log: 0.0 };
+        let to = YScale {
+            top: 0.25,
+            log: 3.0,
+        };
+        // No time, no movement — but the steepness is the target's.
+        assert_eq!(from.eased_toward(to, 0.0), YScale { top: 1.0, log: 3.0 });
+        // Each step covers the same share of what is left, in proportion.
+        let once = from.eased_toward(to, 50.0);
+        let twice = once.eased_toward(to, 50.0);
+        assert!(once.top < 1.0 && twice.top < once.top && twice.top > 0.25);
+        assert!(close(twice.top, from.eased_toward(to, 100.0).top));
+        // Growing mirrors shrinking.
+        let back = to.eased_toward(from, 50.0);
+        assert!(close(back.top * once.top, 0.25));
+        // Given long enough it arrives exactly, and stays.
+        let there = from.eased_toward(to, 5000.0);
+        assert_eq!(there.top, 0.25);
+        assert_eq!(there.eased_toward(to, 16.0), there);
     }
 
     #[test]

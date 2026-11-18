@@ -47,6 +47,14 @@ pub struct App {
     fit_view: bool,
     /// Whether length is drawn on a logarithmic scale.
     log: bool,
+    /// The vertical scale last drawn, which eases toward the one the
+    /// settings and the view call for; `None` until something is drawn,
+    /// so that a newly loaded history starts at rest.
+    shown: Option<YScale>,
+    /// When it was drawn, in milliseconds, and whether it was still
+    /// easing then.
+    drawn_at: f64,
+    easing: bool,
     cursor: Option<Cursor>,
 }
 
@@ -109,6 +117,9 @@ impl App {
             view: View::FULL,
             fit_view: false,
             log: false,
+            shown: None,
+            drawn_at: 0.0,
+            easing: false,
             cursor: None,
         })
     }
@@ -322,10 +333,24 @@ impl App {
         self.view = View::new(start, width, View::min_width(&self.xs));
     }
 
-    /// Draws the plot. `pixel_ratio` is CSS pixels to canvas pixels.
-    pub fn draw(&self, pixel_ratio: f32) {
+    /// Draws the plot. `pixel_ratio` is CSS pixels to canvas pixels and
+    /// `now` the time in milliseconds. Returns whether the vertical scale
+    /// is still easing toward where it is going, in which case the page
+    /// should draw again next frame.
+    pub fn draw(&mut self, pixel_ratio: f32, now: f64) -> bool {
+        let target = self.target_scale();
+        let scale = match self.shown {
+            // The time since the last frame counts only if that frame was
+            // part of this movement.
+            Some(shown) if self.easing => shown.eased_toward(target, (now - self.drawn_at) as f32),
+            Some(shown) => shown.eased_toward(target, 0.0),
+            None => target,
+        };
+        self.shown = Some(scale);
+        self.drawn_at = now;
+        self.easing = scale != target;
+
         let versions = self.history().versions();
-        let scale = self.y_scale();
         let overlay = self.cursor.map(|cursor| {
             // Mark every version by the author of the selected one.
             let author = versions[cursor.version as usize].author;
@@ -346,13 +371,26 @@ impl App {
             pixel_ratio,
             overlay.as_ref(),
         );
+        self.easing
+    }
+
+    /// Ends any easing: the next draw is at rest. For a reader who has
+    /// asked their system for less motion.
+    pub fn settle(&mut self) {
+        self.shown = None;
     }
 
     fn history(&self) -> &History {
         self.builder.history()
     }
 
+    /// The vertical scale on screen.
     fn y_scale(&self) -> YScale {
+        self.shown.unwrap_or_else(|| self.target_scale())
+    }
+
+    /// The vertical scale the settings and the view call for.
+    fn target_scale(&self) -> YScale {
         let log = if self.log {
             YScale::log_for(&self.extents)
         } else {
@@ -389,6 +427,7 @@ impl App {
             self.builder.push(version);
         }
         self.cursor = None;
+        self.shown = None;
         self.upload()?;
         self.view = View::FULL;
         Ok(self.summary())

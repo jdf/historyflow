@@ -64,9 +64,13 @@ function draw() {
   const ratio = window.devicePixelRatio || 1;
   canvas.width = Math.round(canvas.clientWidth * ratio);
   canvas.height = Math.round(canvas.clientHeight * ratio);
-  app.draw(ratio);
+  if (stillness.matches) app.settle();
+  // The vertical scale eases to where it is going; keep drawing until it
+  // gets there.
+  if (app.draw(ratio, performance.now())) scheduleDraw();
   showThumb();
 }
+const stillness = window.matchMedia("(prefers-reduced-motion: reduce)");
 
 // --- The scroll thumb -----------------------------------------------------
 
@@ -469,6 +473,8 @@ try {
     load(await response.text(), params.get("mode") ?? "", at);
     if (params.has("view")) {
       app.set_view(...params.get("view").split(",").map(Number));
+      // A link opens at rest on its view, not easing into it.
+      app.settle();
       draw();
     }
   }
@@ -574,6 +580,7 @@ try {
     detail: () => detail,
     view: () => [...app.view()],
     yScale: () => [...app.y_scale_now()],
+    moving: () => drawScheduled,
     summary: () => summary,
     loading: () => loading !== null,
   };
