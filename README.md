@@ -23,7 +23,8 @@ Research notes on the original are in `docs/research/`.
   `wasm32-unknown-unknown` target on first use.
 - Node.js and npm — for prettier, the browser test driver and `wasm-opt`.
 - Python 3 — the dev server.
-- `wrangler`, logged in — only for `./deploy`.
+- The site repository at `~/projects/mrfeinberg.com` and a logged-in `wrangler`
+  — only for `./deploy`.
 
 Everything else is fetched into the project on first use: the `wasm-bindgen` CLI
 into `build/tools` (at the version `Cargo.lock` resolves for the crate), and a
@@ -41,8 +42,8 @@ tools/e2e.sh           # browser tests against the approved screenshots
 tools/e2e.sh --bless   # approve the current renderings
 ./presubmit.sh         # formatting, clippy, tests, e2e — what CI runs
 
-./deploy -n            # presubmit, then a wrangler dry run
-./deploy               # presubmit, then publish
+./deploy -n            # presubmit, then list what would be staged
+./deploy               # presubmit, then publish to mrfeinberg.com/historyflow/
 ```
 
 ## Testing
@@ -63,5 +64,12 @@ pixel comparison.
 
 ## Deployment
 
-`./deploy` publishes `build/release/dist` as the assets-only Cloudflare Worker
-named in `wrangler.jsonc`.
+`./deploy` publishes to https://mrfeinberg.com/historyflow/. It mirrors
+`build/release/dist` into the `historyflow/` subtree of the site repository
+(`~/projects/mrfeinberg.com`), commits that subtree there, runs the site's own
+Cloudflare publish (`cloudflare/prepare.py`, then `wrangler deploy`), and pushes
+the site repository. The publish is of the site's whole working tree, so any
+other uncommitted edits in that repository go live with it.
+
+`./deploy -n` runs the presubmit and lists what staging would change, without
+touching the site repository.

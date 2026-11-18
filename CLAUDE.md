@@ -16,9 +16,12 @@ See README § Commands. In short: `./dev` to build and serve
 `tools/e2e.sh [--bless]` for browser goldens, `./presubmit.sh` before `main`
 moves.
 
-- Version control is **jj** (colocated git). Commit finished work; the user
-  pushes and deploys themselves.
-- Never run `./deploy` without `-n` unless asked: it publishes.
+- Version control is **jj** (colocated git), remote `origin` =
+  github.com/jdf/historyflow (private). Publish with plain jj:
+  `jj bookmark set main -r @-` then `jj git push --bookmark main`.
+- Never run `./deploy` without `-n` unless asked: it commits to the site repo
+  (`~/projects/mrfeinberg.com`) and publishes
+  https://mrfeinberg.com/historyflow/.
 
 ## Architecture rules
 

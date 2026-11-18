@@ -1,19 +1,28 @@
 #!/usr/bin/env bash
-# Runs the presubmit (which builds the release dist and tests it in a
-# browser), then publishes that dist as the `historyflow` Cloudflare
-# Worker (wrangler.jsonc: static assets only, no code).
+# Publishes the release dist at https://mrfeinberg.com/historyflow/.
 #
-#   ./deploy       presubmit, then upload
-#   ./deploy -n    presubmit, then wrangler's dry run (uploads nothing)
+#   ./deploy       presubmit, stage, commit the site repo, publish, push
+#   ./deploy -n    presubmit, then list what staging would change; touches
+#                  nothing outside this repo
+#
+# The site repo (~/projects/mrfeinberg.com) is the deployed artifact: the
+# whole site is versioned there and published from its working tree as a
+# Cloudflare Worker (see its cloudflare/README.md). This script mirrors
+# the dist into the repo's historyflow/ subtree — fully generated from
+# here, so deletions in it are always safe — commits that subtree, runs
+# the site's own prepare + wrangler deploy, and pushes the site repo.
+# Because the publish is of the site's whole working tree, any other
+# uncommitted edits sitting there go live too.
 #
 # SKIP_PRESUBMIT=1 skips the checks but still rebuilds the release dist.
 set -euo pipefail
 cd "$(dirname "$0")"
 
-DRY=()
+SITE="${HISTORYFLOW_SITE_DIR:-$HOME/projects/mrfeinberg.com}"
+
+DRY=""
 if [ "${1:-}" = "-n" ]; then
-  DRY=(--dry-run)
-  shift
+  DRY=1
 fi
 
 if [ -n "${SKIP_PRESUBMIT:-}" ]; then
@@ -22,7 +31,7 @@ else
   ./presubmit.sh
 fi
 
-DIST=build/release/dist
+DIST="$PWD/build/release/dist"
 for f in index.html app.js style.css build-info.js \
          pkg/historyflow_web.js pkg/historyflow_web_bg.wasm; do
   if [ ! -f "$DIST/$f" ]; then
@@ -30,6 +39,39 @@ for f in index.html app.js style.css build-info.js \
     exit 1
   fi
 done
+if [ ! -d "$SITE/.jj" ] || [ ! -f "$SITE/cloudflare/wrangler.jsonc" ]; then
+  echo "deploy: $SITE is not the site repo" >&2
+  exit 1
+fi
+BUILD_ID=$(sed -n "s/.*id: '\([^']*\)'.*/\1/p" "$DIST/build-info.js")
 
-echo "== deploying build $(sed -n "s/.*id: '\([^']*\)'.*/\1/p" "$DIST/build-info.js")"
-wrangler deploy ${DRY[@]+"${DRY[@]}"} "$@"
+if [ -n "$DRY" ]; then
+  echo "== dry run: build $BUILD_ID would change $SITE/historyflow/ as follows"
+  rsync -an --delete --exclude .DS_Store --itemize-changes \
+    "$DIST/" "$SITE/historyflow/"
+  exit 0
+fi
+
+echo "== staging build $BUILD_ID into $SITE/historyflow/"
+rsync -a --delete --exclude .DS_Store "$DIST/" "$SITE/historyflow/"
+
+cd "$SITE"
+# Commit scoped to historyflow/; a re-deploy of an unchanged build stages
+# nothing and commits nothing.
+if [ -n "$(jj diff --summary historyflow)" ]; then
+  jj commit historyflow -m "historyflow build $BUILD_ID"
+else
+  echo "deploy: site repo already at historyflow build $BUILD_ID"
+fi
+
+echo "== publishing the site"
+python3 cloudflare/prepare.py
+if [ ! -x cloudflare/node_modules/.bin/wrangler ]; then
+  npm ci --prefix cloudflare >/dev/null
+fi
+cloudflare/node_modules/.bin/wrangler deploy --config cloudflare/wrangler.jsonc
+
+# Back the site repo up to GitHub, after the publish so a GitHub hiccup
+# can't block a deploy; a failure here still fails the script.
+jj bookmark set main -r @-
+jj git push --bookmark main
