@@ -9,6 +9,8 @@
 //   mode      lines | prose | sentences (default: the bundle's own)
 //   at        version,y — where the crosshair starts (default: the last
 //             version, at its top); y is a fraction of the plot's height
+//   view      start,width — the part of the history on screen, in
+//             fractions of the whole (default: all of it)
 //   no-ui     hide everything but the plot (used by the e2e screenshots)
 //   e2e       leave the build id out of the status line
 import init, { App, version } from "./pkg/historyflow_web.js";
@@ -50,6 +52,37 @@ function draw() {
   canvas.width = Math.round(canvas.clientWidth * ratio);
   canvas.height = Math.round(canvas.clientHeight * ratio);
   app.draw(ratio);
+}
+
+// Draws once, before the next repaint, however many times it is asked:
+// wheel events arrive faster than frames.
+let drawScheduled = false;
+function scheduleDraw() {
+  if (drawScheduled) return;
+  drawScheduled = true;
+  requestAnimationFrame(() => {
+    drawScheduled = false;
+    draw();
+  });
+}
+
+// The wheel and the trackpad move through time, the only axis that
+// zooms. Scrolling sideways pans. Scrolling up and down zooms about the
+// pointer, as does pinching (which browsers report as a wheel event with
+// the control key down, in finer steps).
+function onWheel(event) {
+  event.preventDefault();
+  const box = canvas.getBoundingClientRect();
+  // Mice in some browsers report lines, not pixels.
+  const scale = event.deltaMode === WheelEvent.DOM_DELTA_LINE ? 16 : 1;
+  const [dx, dy] = [event.deltaX * scale, event.deltaY * scale];
+  if (!event.ctrlKey && Math.abs(dx) > Math.abs(dy)) {
+    app.pan(dx, box.width);
+  } else {
+    const rate = event.ctrlKey ? 0.01 : 0.002;
+    app.zoom(Math.exp(dy * rate), event.clientX - box.left, box.width);
+  }
+  scheduleDraw();
 }
 
 // --- The text panel -------------------------------------------------------
@@ -278,6 +311,10 @@ try {
   if (!response.ok) throw new Error(`${source}: HTTP ${response.status}`);
   const at = (params.get("at") ?? "").split(",").filter(Boolean).map(Number);
   load(await response.text(), params.get("mode") ?? "", at);
+  if (params.has("view")) {
+    app.set_view(...params.get("view").split(",").map(Number));
+    draw();
+  }
 
   controls.coloring.onchange = () => {
     app.set_coloring(controls.coloring.value);
@@ -304,14 +341,21 @@ try {
     if (event.buttons) selectAtPointer(event);
   };
   text.onscroll = onTextScroll;
-  $("previous").onclick = () => select(cursor.version - 1, cursor.y);
-  $("next").onclick = () => select(cursor.version + 1, cursor.y);
+  canvas.addEventListener("wheel", onWheel, { passive: false });
+  // Stepping to a version that is off screen brings it on.
+  const step = (by) => {
+    const to = Math.max(0, Math.min(summary.versions - 1, cursor.version + by));
+    app.reveal(to);
+    select(to, cursor.y);
+  };
+  $("previous").onclick = () => step(-1);
+  $("next").onclick = () => step(1);
   window.onkeydown = (event) => {
-    const step = { ArrowLeft: -1, ArrowRight: 1 }[event.key];
-    if (!step || event.target.matches("select, input") || !summary?.versions)
+    const by = { ArrowLeft: -1, ArrowRight: 1 }[event.key];
+    if (!by || event.target.matches("select, input") || !summary?.versions)
       return;
     event.preventDefault();
-    select(cursor.version + step, cursor.y);
+    step(by);
   };
 
   $("open").onclick = () => $("file").click();
@@ -337,7 +381,11 @@ try {
 
   // For the e2e tests: the state they assert on, and the flag they wait
   // for before looking.
-  window.__historyflow = { cursor: () => cursor, detail: () => detail };
+  window.__historyflow = {
+    cursor: () => cursor,
+    detail: () => detail,
+    view: () => [...app.view()],
+  };
   window.__historyflowReady = true;
 } catch (error) {
   report(`failed to start: ${error}`);

@@ -25,6 +25,7 @@ CASES=(
   "demo-sentences|?no-ui&mode=sentences"
   "demo-ui|?e2e"
   "demo-ui-cursor|?e2e&at=30,0.35"
+  "demo-zoomed|?no-ui&at=24,0.3&view=0.35,0.2"
 )
 
 tools/build.sh release >/dev/null

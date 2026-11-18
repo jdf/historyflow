@@ -4,7 +4,8 @@
 mod renderer;
 
 use historyflow_core::{
-    Bundle, History, HistoryBuilder, Mode, Spacing, VersionIndex, author_colors, layout, passages,
+    Bundle, History, HistoryBuilder, Mode, Spacing, VersionIndex, View, author_colors, layout,
+    passages,
 };
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
@@ -35,6 +36,8 @@ pub struct App {
     coloring: Coloring,
     /// The x of each version, from the current layout.
     xs: Vec<f32>,
+    /// The part of the history on screen.
+    view: View,
     cursor: Option<Cursor>,
 }
 
@@ -93,6 +96,7 @@ impl App {
             spacing: Spacing::default(),
             coloring: Coloring::default(),
             xs: Vec::new(),
+            view: View::FULL,
             cursor: None,
         })
     }
@@ -119,6 +123,7 @@ impl App {
         self.bundle = bundle;
         self.cursor = None;
         self.upload()?;
+        self.view = View::FULL;
         let bundle = &self.bundle;
 
         let history = &self.history;
@@ -180,8 +185,8 @@ impl App {
         if self.xs.is_empty() {
             return Vec::new();
         }
-        let x = (x - MARGIN) / (width - 2.0 * MARGIN).max(1.0);
-        let y = (y - MARGIN) / (height - 2.0 * MARGIN).max(1.0);
+        let x = self.view.at(across(x, width));
+        let y = across(y, height);
         let after = self.xs.partition_point(|&version_x| version_x < x);
         let nearest = match (after.checked_sub(1), self.xs.get(after)) {
             (Some(before), Some(&next)) if x - self.xs[before] <= next - x => before,
@@ -225,6 +230,36 @@ impl App {
         Ok(serde_json::to_string(&detail).expect("serializable"))
     }
 
+    /// Zooms the time axis by `factor` (less than 1 zooms in) about the
+    /// point `x` CSS pixels across a canvas `width` CSS pixels wide. Stops
+    /// at the whole history one way and three revisions the other.
+    pub fn zoom(&mut self, factor: f32, x: f32, width: f32) {
+        let min_width = View::min_width(&self.xs);
+        self.view = self.view.zoom(factor, across(x, width), min_width);
+    }
+
+    /// Slides the view `dx` CSS pixels later in the history (earlier if
+    /// negative), for a canvas `width` CSS pixels wide.
+    pub fn pan(&mut self, dx: f32, width: f32) {
+        self.view = self.view.pan(dx / (width - 2.0 * MARGIN).max(1.0));
+    }
+
+    /// Slides the view, if need be, to bring a version into it.
+    pub fn reveal(&mut self, version: u32) {
+        if let Some(&x) = self.xs.get(version as usize) {
+            self.view = self.view.reveal(x);
+        }
+    }
+
+    /// The view as `[start, width]`, in fractions of the whole history.
+    pub fn view(&self) -> Vec<f32> {
+        vec![self.view.start, self.view.width]
+    }
+
+    pub fn set_view(&mut self, start: f32, width: f32) {
+        self.view = View::new(start, width, View::min_width(&self.xs));
+    }
+
     /// Draws the plot. `pixel_ratio` is CSS pixels to canvas pixels.
     pub fn draw(&self, pixel_ratio: f32) {
         let versions = self.history.versions();
@@ -240,15 +275,52 @@ impl App {
                     .collect(),
             }
         });
-        self.renderer
-            .draw(self.coloring, versions.len(), pixel_ratio, overlay.as_ref());
+        self.renderer.draw(
+            self.coloring,
+            versions.len(),
+            self.view,
+            pixel_ratio,
+            overlay.as_ref(),
+        );
     }
 
     fn upload(&mut self) -> Result<(), JsValue> {
         let layout = layout(&self.history, self.spacing);
         let colors = author_colors(self.history.authors());
         self.renderer.upload(&layout, &colors)?;
+        // Keep the same versions on screen when the spacing moves them.
+        let (first, last) = (self.view.start, self.view.start + self.view.width);
+        let (first, last) = (index_at(&self.xs, first), index_at(&self.xs, last));
         self.xs = layout.xs;
+        let (start, end) = (x_at(&self.xs, first), x_at(&self.xs, last));
+        self.view = View::new(start, end - start, View::min_width(&self.xs));
         Ok(())
     }
+}
+
+/// How far across the plot a canvas coordinate is: 0 at the plot's near
+/// edge, 1 at its far edge. `size` is the canvas's, in the same units.
+fn across(coordinate: f32, size: f32) -> f32 {
+    (coordinate - MARGIN) / (size - 2.0 * MARGIN).max(1.0)
+}
+
+/// The version at `x`, as an index with a fraction for a point between
+/// two versions.
+fn index_at(xs: &[f32], x: f32) -> f32 {
+    let after = xs.partition_point(|&version_x| version_x <= x);
+    match (after.checked_sub(1), xs.get(after)) {
+        (Some(before), Some(&next)) => before as f32 + (x - xs[before]) / (next - xs[before]),
+        (Some(before), None) => before as f32,
+        _ => 0.0,
+    }
+}
+
+/// The inverse of [`index_at`].
+fn x_at(xs: &[f32], index: f32) -> f32 {
+    let Some(&last) = xs.last() else {
+        return 0.0;
+    };
+    let before = (index.max(0.0) as usize).min(xs.len() - 1);
+    let next = xs.get(before + 1).copied().unwrap_or(last);
+    xs[before] + (index - before as f32).clamp(0.0, 1.0) * (next - xs[before])
 }

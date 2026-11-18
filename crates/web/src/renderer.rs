@@ -1,7 +1,7 @@
 //! Draws a layout with WebGL2: every quad is one instance of a unit
 //! square, placed by the vertex shader.
 
-use historyflow_core::{Layout, Quad};
+use historyflow_core::{Layout, Quad, View};
 use wasm_bindgen::prelude::*;
 use web_sys::{
     HtmlCanvasElement, WebGl2RenderingContext as Gl, WebGlBuffer, WebGlProgram, WebGlShader,
@@ -70,6 +70,7 @@ layout(location = 3) in vec3 info;    // author, left age, right age
 
 uniform vec2 viewport;    // canvas size in pixels
 uniform vec4 plot;        // the plot's rectangle in pixels: x, y, width, height
+uniform vec2 view;        // the layout x at the plot's left edge, and the span across it
 uniform float line_width; // width of a version's line in pixels
 uniform float age_span;   // the age, in versions, drawn as fully aged
 
@@ -80,7 +81,7 @@ void main() {
     bool right = corner.x > 0.5;
     float x = right ? xs.y : xs.x;
     float y = right ? mix(ys.z, ys.w, corner.y) : mix(ys.x, ys.y, corner.y);
-    vec2 pixel = plot.xy + vec2(x, y) * plot.zw;
+    vec2 pixel = plot.xy + vec2((x - view.x) / view.y, y) * plot.zw;
     // A version's own line has no width in layout coordinates.
     if (xs.x == xs.y) {
         pixel.x += (corner.x - 0.5) * line_width;
@@ -206,6 +207,7 @@ impl Renderer {
         &self,
         coloring: Coloring,
         versions: usize,
+        view: View,
         pixel_ratio: f32,
         overlay: Option<&Overlay>,
     ) {
@@ -222,8 +224,19 @@ impl Renderer {
         let (plot_width, plot_height) = (width - 2.0 * margin, height - 2.0 * margin);
         // A version's line is 2 CSS pixels wide, or less where versions
         // are packed so tightly that lines would hide the ribbons.
-        let spacing = plot_width / versions.max(2) as f32;
+        let spacing = plot_width / (versions.max(2) as f32 * view.width);
         let line_width = (2.0 * pixel_ratio).min(spacing * 0.5).max(1.0);
+
+        // Zoomed in, the plot continues past both sides; keep it out of
+        // the margins (but for the half of a line that overhangs them).
+        gl.enable(Gl::SCISSOR_TEST);
+        let overhang = line_width / 2.0;
+        gl.scissor(
+            (margin - overhang).floor() as i32,
+            0,
+            (plot_width + 2.0 * overhang).ceil() as i32,
+            height as i32,
+        );
 
         gl.use_program(Some(&self.program));
         let uniform = |name| gl.get_uniform_location(&self.program, name);
@@ -235,6 +248,7 @@ impl Renderer {
         };
         set(uniform("viewport"), &[width, height]);
         set(uniform("plot"), &[margin, margin, plot_width, plot_height]);
+        set(uniform("view"), &[view.start, view.width]);
         set(uniform("line_width"), &[line_width]);
         set(uniform("age_span"), &[versions.max(2) as f32 - 1.0]);
         gl.uniform1i(uniform("coloring").as_ref(), coloring as i32);
@@ -246,6 +260,7 @@ impl Renderer {
         }
 
         let Some(overlay) = overlay else {
+            gl.disable(Gl::SCISSOR_TEST);
             return;
         };
         gl.use_program(Some(&self.solid));
@@ -266,7 +281,7 @@ impl Renderer {
         let thin = pixel_ratio;
         let dot = 3.0 * pixel_ratio;
         for &mark in &overlay.marks {
-            let x = margin + mark * plot_width;
+            let x = margin + view.across(mark) * plot_width;
             fill_rect(
                 x - dot / 2.0,
                 height - (margin + dot) / 2.0,
@@ -275,10 +290,11 @@ impl Renderer {
                 WHITE,
             );
         }
-        let x = margin + overlay.x * plot_width;
+        let x = margin + view.across(overlay.x) * plot_width;
         let y = margin + overlay.y * plot_height;
         fill_rect(x - thin / 2.0, margin, thin, plot_height, WHITE);
         fill_rect(margin, y - thin / 2.0, plot_width, thin, ORANGE);
+        gl.disable(Gl::SCISSOR_TEST);
     }
 }
 

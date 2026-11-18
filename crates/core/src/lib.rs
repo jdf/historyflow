@@ -32,6 +32,7 @@ mod layout;
 mod model;
 mod passage;
 mod segment;
+mod view;
 
 pub use attribute::{Config, HistoryBuilder, Matching, Measure};
 pub use bundle::{Bundle, Mode};
@@ -41,6 +42,7 @@ pub use model::{
 };
 pub use passage::{Passage, passages};
 pub use segment::{Lines, Prose, Segmentation, Segmenter, Sentences};
+pub use view::View;
 
 /// The crate version, surfaced in the page so a build can be identified.
 pub fn version() -> &'static str {

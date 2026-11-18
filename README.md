@@ -38,6 +38,11 @@ orange line; scrolling the text moves the crosshair in turn. The left and right
 arrow keys step through versions. Dots under the plot mark the other versions by
 the selected version's author.
 
+The mouse wheel and trackpad move through time: scroll up and down (or pinch) to
+zoom about the pointer, scroll sideways to pan. Zooming out stops when the whole
+history fills the plot, and zooming in when three revisions do. Only time zooms;
+the whole document is always in view top to bottom.
+
 With no bundle the page shows `web/samples/demo.json`, a synthetic wiki page
 written by `tools/make-sample.py`.
 

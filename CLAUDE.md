@@ -78,6 +78,10 @@ temporary directory.
 - `unsafe` is forbidden workspace-wide.
 - Markdown, `web/` and `tools/*.mjs` are formatted by prettier
   (`proseWrap: always`); Rust by rustfmt. Presubmit enforces both.
+- Only time (x) zooms. `View` (core) is the window onto the layout's x axis,
+  with the limits: the whole history at one end, three revisions at the other.
+  It is a shader uniform, so zooming and panning redraw without rebuilding
+  anything. y always shows the whole document.
 - The crosshair's y and the text panel are linked through `passages()`: each
   passage of a version's text carries its y extent on the version's line, and
   `web/app.js` maps between that and the span's position in the scrolled text.
@@ -89,6 +93,9 @@ temporary directory.
 
 Noted by the user for later; not started.
 
-- **Pan and zoom on the plot** with the mouse wheel and trackpad. Zoom acts on
-  the time (x) dimension only, at least at first. Fully zoomed out, the whole
-  history fills the whole window; fully zoomed in, 3 revisions do.
+- **A compact representation of a history.** Bundles carry every version's full
+  text, which will not scale. Design the minimal form from which the history can
+  be reconstructed: deltas only. The producer could be a command-line app, a
+  desktop app, or a website; its input may be very large (the whole history of a
+  software repository, or of a Wikipedia article). To be designed, not yet
+  specified further.

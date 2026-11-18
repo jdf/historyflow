@@ -195,7 +195,80 @@ try {
     near((await cursor()).version, 39.75, 1),
   );
 
+  // --- The wheel zooms time about the pointer, between the whole history
+  // and three revisions; scrolling sideways pans.
+  const view = () => page.evaluate("window.__historyflow.view()");
+  const wheel = async (x, deltas) => {
+    await page.mouse.move(box.left + x, box.top + 100);
+    await page.mouse.wheel(deltas);
+    await pause(60);
+  };
+  const plotWidth = box.width - 24;
+  const three = 2 / 53; // three of 54 evenly spaced versions
+  await open("?e2e");
+  check(
+    "the view starts as the whole history",
+    (await view()).join() === "0,1",
+  );
+  await wheel(12 + plotWidth / 4, { deltaY: -200 });
+  let seen = await view();
+  check("wheel up zooms in", near(seen[1], Math.exp(-0.4), 1e-4), seen);
+  check(
+    "zooming holds what is under the pointer",
+    near(seen[0] + seen[1] / 4, 0.25, 1e-4),
+    seen,
+  );
+  await wheel(12 + plotWidth / 4, { deltaX: plotWidth / 4 });
+  const panned = await view();
+  check(
+    "scrolling sideways pans by that many pixels",
+    near(panned[0] - seen[0], seen[1] / 4, 1e-4),
+    panned,
+  );
+  check("panning keeps the zoom", near(panned[1], seen[1], 1e-6), panned);
+  for (let i = 0; i < 5; i++)
+    await wheel(12 + plotWidth / 2, { deltaY: -2000 });
+  seen = await view();
+  check(
+    "zooming in stops at three revisions",
+    near(seen[1], three, 1e-5),
+    seen,
+  );
+  await page.mouse.click(box.left + box.width / 2, box.top + 13);
+  at = await cursor();
+  check(
+    "a click when zoomed selects the version under the pointer",
+    near(at.version / 53, seen[0] + seen[1] / 2, 0.5 / 53 + 1e-4),
+    at,
+  );
+  await wheel(12, { deltaX: 1e6 });
+  seen = await view();
+  check(
+    "panning stops at the end of the history",
+    near(seen[0] + seen[1], 1, 1e-5),
+    seen,
+  );
+  for (let i = 0; i < 60; i++) await page.keyboard.press("ArrowLeft");
+  seen = await view();
+  check(
+    "stepping to an off-screen version brings it into view",
+    (await cursor()).version === 0 && seen[0] === 0,
+    seen,
+  );
+  for (let i = 0; i < 5; i++) await wheel(12 + plotWidth / 2, { deltaY: 2000 });
+  check(
+    "zooming out stops at the whole history",
+    (await view()).join() === "0,1",
+  );
+  await page.select("#spacing", "date");
+  await pause(60);
+  check(
+    "changing the spacing keeps the whole history in view",
+    (await view()).join() === "0,1",
+  );
+
   // --- Comparing by lines shows the text as lines.
+  await open("?e2e&at=40,0");
   await page.select("#mode", "lines");
   await pause(100);
   check(
