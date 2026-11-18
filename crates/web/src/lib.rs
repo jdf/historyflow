@@ -116,7 +116,7 @@ impl App {
             xs: Vec::new(),
             extents: Vec::new(),
             view: View::FULL,
-            fit_view: false,
+            fit_view: true,
             log: false,
             shown: None,
             drawn_at: 0.0,

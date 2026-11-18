@@ -10,8 +10,9 @@
 //   limit     with wiki: how many revisions to fetch (default 500)
 //   coloring  author | age
 //   spacing   version | date
-//   height    all | view — whether the plot is as tall as the longest
-//             version of the whole history, or of those on screen
+//   height    view | all — whether the plot is as tall as the longest
+//             version of those on screen (the default), or of the whole
+//             history
 //   scale     linear | log
 //   mode      lines | prose | sentences (default: the file's own)
 //   at        version,y — where the crosshair starts (default: the last
