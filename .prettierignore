@@ -1,0 +1,4 @@
+build/
+target/
+tests/goldens/
+web/pkg/

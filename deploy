@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Runs the presubmit (which builds the release dist and tests it in a
+# browser), then publishes that dist as the `historyflow` Cloudflare
+# Worker (wrangler.jsonc: static assets only, no code).
+#
+#   ./deploy       presubmit, then upload
+#   ./deploy -n    presubmit, then wrangler's dry run (uploads nothing)
+#
+# SKIP_PRESUBMIT=1 skips the checks but still rebuilds the release dist.
+set -euo pipefail
+cd "$(dirname "$0")"
+
+DRY=()
+if [ "${1:-}" = "-n" ]; then
+  DRY=(--dry-run)
+  shift
+fi
+
+if [ -n "${SKIP_PRESUBMIT:-}" ]; then
+  tools/build.sh release
+else
+  ./presubmit.sh
+fi
+
+DIST=build/release/dist
+for f in index.html app.js style.css build-info.js \
+         pkg/historyflow_web.js pkg/historyflow_web_bg.wasm; do
+  if [ ! -f "$DIST/$f" ]; then
+    echo "deploy: $DIST/$f missing after build" >&2
+    exit 1
+  fi
+done
+
+echo "== deploying build $(sed -n "s/.*id: '\([^']*\)'.*/\1/p" "$DIST/build-info.js")"
+wrangler deploy ${DRY[@]+"${DRY[@]}"} "$@"

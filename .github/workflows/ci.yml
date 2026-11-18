@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  presubmit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      # rust-toolchain.toml pins the toolchain; the first cargo call
+      # installs it. Cache the registry, target/, and the project-local
+      # wasm-bindgen CLI.
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+            build/tools
+          key: cargo-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml', 'Cargo.lock') }}
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/historyflow/chrome
+          key: chrome-${{ runner.os }}-${{ hashFiles('tools/chrome-version.txt') }}
+
+      - run: npm ci
+
+      # Goldens are bit-exact per architecture and blessed on arm64
+      # macOS, so CI checks that the page loads and renders without
+      # errors but skips the pixel comparison.
+      - run: ./presubmit.sh
+        env:
+          E2E_NO_GOLDEN: 1

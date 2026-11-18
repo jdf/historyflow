@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# One command: build, and make sure the dev server is running. After
+# this, reload http://localhost:8790/ in the browser.
+#
+#   ./dev            debug build (default)
+#   ./dev release    release build (serves the release dist instead)
+#   ./dev stop       stop the dev server
+set -euo pipefail
+cd "$(dirname "$0")"
+
+if [ "${1:-}" = "stop" ]; then
+  if [ -f build/serve.pid ] && kill -0 "$(cat build/serve.pid)" 2>/dev/null; then
+    kill "$(cat build/serve.pid)"
+    echo "dev server stopped"
+  else
+    echo "dev server not running"
+  fi
+  rm -f build/serve.pid build/serve.dir
+  exit 0
+fi
+
+PROFILE="${1:-debug}"
+tools/build.sh "$PROFILE"
+
+PORT=8790
+DIST="$PWD/build/$PROFILE/dist"
+
+# (Re)start the server if it isn't running or is serving a different dist.
+if [ -f build/serve.pid ] && kill -0 "$(cat build/serve.pid)" 2>/dev/null; then
+  if [ "$(cat build/serve.dir 2>/dev/null)" != "$DIST" ]; then
+    kill "$(cat build/serve.pid)" 2>/dev/null || true
+    rm -f build/serve.pid
+  fi
+fi
+if [ ! -f build/serve.pid ] || ! kill -0 "$(cat build/serve.pid)" 2>/dev/null; then
+  nohup python3 tools/serve.py "$DIST" "$PORT" > build/serve.log 2>&1 &
+  echo $! > build/serve.pid
+  echo "$DIST" > build/serve.dir
+fi
+
+echo
+echo "historyflow ($PROFILE) → http://localhost:$PORT/"

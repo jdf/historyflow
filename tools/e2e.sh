@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+# End-to-end tests: loads the real release build in headless Chrome on
+# SwiftShader-backed ANGLE (Chrome's WebGL stack, minus the GPU), fails on
+# any console error, and byte-compares screenshots against the approved
+# goldens in tests/goldens/e2e/.
+#
+#   tools/e2e.sh          # verify
+#   tools/e2e.sh --bless  # approve the current renderings
+#
+# Chrome is pinned (tools/chrome-version.txt) so goldens never drift with
+# browser updates; bump the pin and re-bless deliberately. Goldens are
+# bit-exact per architecture: they are blessed on arm64 macOS, so CI
+# (x86-64 Linux) runs with E2E_NO_GOLDEN=1, which keeps the load and
+# console-error checks and skips the pixel comparison.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+PORT=8791
+GOLDEN_DIR=tests/goldens/e2e
+
+# name|query — add a case per view/mode as the visualization grows.
+CASES=(
+  "placeholder|?no-ui"
+)
+
+tools/build.sh release >/dev/null
+if [ ! -d node_modules/puppeteer-core ]; then
+  npm install >/dev/null
+fi
+CHROME="${CHROME:-$(tools/get-chrome.sh)}"
+
+# The harness owns this port; a leftover listener could serve a stale
+# dist. Kill only the LISTENER, never clients connected to the port.
+lsof -ti :"$PORT" -sTCP:LISTEN 2>/dev/null | xargs kill 2>/dev/null || true
+
+python3 tools/serve.py "$PWD/build/release/dist" "$PORT" &
+SERVER_PID=$!
+trap 'kill $SERVER_PID 2>/dev/null' EXIT
+for _ in $(seq 1 50); do
+  curl -sf -o /dev/null "http://localhost:$PORT/" && break
+  sleep 0.1
+done
+
+FAILED=0
+VERIFIED=0
+while IFS= read -r line; do
+  NAME="${line#shot: }"
+  if [ "$NAME" = "$line" ]; then
+    echo "$line" >&2  # driver errors
+    continue
+  fi
+  VERIFIED=$((VERIFIED + 1))
+  GOLDEN="$GOLDEN_DIR/$NAME.png"
+  RECEIVED="build/e2e-received-$NAME.png"
+
+  if [ "${1:-}" = "--bless" ]; then
+    mkdir -p "$GOLDEN_DIR"
+    cp "$RECEIVED" "$GOLDEN"
+    echo "blessed: $GOLDEN ($(wc -c < "$GOLDEN" | tr -d ' ') bytes)"
+  elif [ -n "${E2E_NO_GOLDEN:-}" ]; then
+    echo "e2e loaded OK (golden skipped): $NAME"
+  elif [ ! -f "$GOLDEN" ]; then
+    echo "no golden at $GOLDEN — run with --bless after verifying $RECEIVED" >&2
+    FAILED=1
+  elif cmp -s "$GOLDEN" "$RECEIVED"; then
+    echo "e2e golden OK: $NAME"
+  else
+    echo "e2e golden MISMATCH: compare $RECEIVED against $GOLDEN" >&2
+    FAILED=1
+  fi
+done < <(node tools/e2e.mjs "$CHROME" "http://localhost:$PORT/" build \
+  "${CASES[@]}")
+
+# A process substitution's exit status is invisible to set -e; a failed
+# or dead driver shows up as a short shot count.
+if [ "$VERIFIED" -ne "${#CASES[@]}" ]; then
+  echo "e2e driver produced $VERIFIED of ${#CASES[@]} shots" >&2
+  FAILED=1
+fi
+exit $FAILED
