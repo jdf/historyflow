@@ -23,6 +23,29 @@ moves.
   (`~/projects/mrfeinberg.com`) and publishes
   https://mrfeinberg.com/historyflow/.
 
+## The model (`crates/core`)
+
+A data source yields `SourceVersion`s (text, author, time, comment), oldest
+first. `HistoryBuilder::push` segments each text into atoms and gives every atom
+a `TokenId`; an atom judged to be the same text as an earlier one reuses its
+token, anything else is a new token whose origin is that version. Everything the
+plot needs comes from token identity: origin gives author and age, and
+`History::links` gives the passages two versions share (the ribbons).
+
+`Config` chooses how, in three independent parts:
+
+- `Segmenter`: `Prose` (words in sentences in paragraphs), `Sentences` (the
+  original 2004 granularity), `Lines` (source code).
+- `Matching`: `Historical` (WikiWho-style: whole blocks, then units, matched by
+  content against the previous version and then all earlier ones, so moves and
+  restored text keep their identity) or `Pairwise` (strict in-order diff against
+  the previous version only, like `git blame`).
+- `Measure`: token size in characters or one per atom.
+
+Presets: `Config::prose()`, `Config::sentences_2004()`, `Config::source_lines()`
+(lines + pairwise). `cargo run --release -p historyflow-core --example scale` is
+a rough performance check.
+
 ## Architecture rules
 
 - **`crates/core`** has no browser or GL dependency. All model, diff and layout
