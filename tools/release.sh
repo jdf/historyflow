@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
-# Releases the historyflow command: tags this repository and asks the
-# public distribution repository (jdf/historyflow-cli) to build that tag
-# and publish it as a GitHub release there, then asks the Homebrew tap
-# (jdf/homebrew-historyflow) to rewrite its formula for that release.
-# It waits for the build, which takes a few minutes.
+# Releases the historyflow command: tags main, runs the release workflow
+# on that tag (which builds for each platform and publishes a GitHub
+# release), then writes the Homebrew formula for the release, commits it
+# and pushes. It waits for the build, which takes a few minutes.
 #
 #   tools/release.sh 0.2.0
 #
@@ -13,8 +12,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 VERSION="${1:?usage: tools/release.sh <version>}"
-PUBLIC=jdf/historyflow-cli
-TAP=jdf/homebrew-historyflow
+PUBLIC=jdf/historyflow
 
 IN_CARGO=$(sed -n 's/^version = "\(.*\)"$/\1/p' Cargo.toml | head -1)
 if [ "$IN_CARGO" != "$VERSION" ]; then
@@ -37,7 +35,7 @@ COMMIT=$(jj log --no-graph -r main -T commit_id)
 ASKED=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 git tag "v$VERSION" "$COMMIT"
 git push origin "v$VERSION"
-gh workflow run release.yml -R "$PUBLIC" -f version="$VERSION" -f ref="v$VERSION"
+gh workflow run release.yml -R "$PUBLIC" --ref main -f version="$VERSION" -f ref="v$VERSION"
 
 # The run just asked for takes a moment to be listed.
 RUN=""
@@ -58,5 +56,8 @@ if ! gh run watch "$RUN" -R "$PUBLIC" --exit-status >/dev/null; then
   exit 1
 fi
 
-gh workflow run update.yml -R "$TAP" -f version="$VERSION"
-echo "release: v$VERSION is published, and $TAP is rewriting its formula"
+tools/formula.sh "$VERSION"
+jj commit -m "The Homebrew formula for $VERSION" Formula/historyflow.rb
+jj bookmark set main -r @-
+jj git push --bookmark main
+echo "release: v$VERSION is published, and the formula is pushed"

@@ -1,0 +1,108 @@
+# Builds the historyflow command and publishes it as a GitHub release
+# here: one archive per platform and their checksums, from which
+# tools/formula.sh writes the Homebrew formula.
+#
+# Run it with tools/release.sh, or by hand:
+#
+#   gh workflow run release.yml -f version=0.2.1 -f ref=v0.2.1
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: The version to release, as in Cargo.toml (0.1.0)
+        required: true
+      ref:
+        description: The commit, tag or branch to build
+        required: true
+        default: main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  VERSION: ${{ inputs.version }}
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            targets: aarch64-apple-darwin x86_64-apple-darwin
+          - os: ubuntu-latest
+            # musl, so the one binary runs on any Linux distribution.
+            targets: x86_64-unknown-linux-musl
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      # The viewer (the page and its WebAssembly), which the command
+      # embeds as it is built.
+      - run: tools/build.sh release
+
+      - name: Build the command for each target
+        run: |
+          for target in ${{ matrix.targets }}; do
+            rustup target add "$target"
+            cargo build --release --locked -p historyflow-cli --target "$target"
+          done
+
+      - name: Check the version and package
+        run: |
+          mkdir dist
+          for target in ${{ matrix.targets }}; do
+            binary="target/$target/release/historyflow"
+            # The first target of each runner is its own architecture and
+            # can be run; the version it reports must be the one asked for.
+            if [ "$target" = "$(echo ${{ matrix.targets }} | cut -d' ' -f1)" ]; then
+              reported=$("$binary" --version)
+              if [ "$reported" != "historyflow $VERSION" ]; then
+                echo "::error::built '$reported', asked to release $VERSION"
+                exit 1
+              fi
+            fi
+            tar -czf "dist/historyflow-$VERSION-$target.tar.gz" \
+              -C "target/$target/release" historyflow -C "$GITHUB_WORKSPACE" LICENSE
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: historyflow-${{ matrix.os }}
+          path: dist/*.tar.gz
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          (cd dist && sha256sum *.tar.gz > SHA256SUMS && cat SHA256SUMS)
+          gh release create "v$VERSION" dist/* \
+            --title "historyflow $VERSION" \
+            --verify-tag \
+            --notes "Installing it is described in the README. Or download the archive for your platform below, unpack it, and put \`historyflow\` on your PATH."

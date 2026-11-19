@@ -41,7 +41,7 @@ tools/e2e.sh --bless   # approve the current renderings
   The publish is of that repository's whole working tree, so check it for other
   uncommitted edits first.
 - Version control is **jj** (colocated git), remote `origin` =
-  github.com/jdf/historyflow (private). Publish with plain jj:
+  github.com/jdf/historyflow (public). Publish with plain jj:
   `jj bookmark set main -r @-` then `jj git push --bookmark main`.
 - **Run `./presubmit.sh` locally before a push, and do not wait for GitHub's CI
   afterwards.** The user's rule: the local presubmit is the check, and waiting
@@ -137,15 +137,14 @@ a script can make a history, as `tools/make-sample.py` does.
 
 ## Releases
 
-`tools/release.sh <version>` tags this repository and dispatches `release.yml`
-in the public `jdf/historyflow-cli` (cloned at `~/projects/historyflow-cli`),
-which builds from here with a read-only deploy key and publishes the release
-there. It waits for that build, then dispatches `update.yml` in the public tap,
-`jdf/homebrew-historyflow` (cloned at `~/projects/homebrew-historyflow`), which
-writes `Formula/historyflow.rb` from the release's checksums with no credential
-of ours. The tap is a separate repository only for its name: `homebrew-…` is
-what lets `brew install jdf/historyflow/historyflow` work with no `brew tap` or
-`brew trust`. Publishing is outward-facing: never run it unless asked.
+`tools/release.sh <version>` tags `main`, runs `.github/workflows/release.yml`
+on the tag (which builds for macOS on Apple silicon and Intel and for Linux on
+x86-64, and publishes a GitHub release in this repository), then runs
+`tools/formula.sh`, which writes `Formula/historyflow.rb` from the release's
+checksums, and commits and pushes it. This repository is its own Homebrew tap.
+Its name does not start with `homebrew-`, so the tap is added by address:
+`brew tap jdf/historyflow https://github.com/jdf/historyflow`. Publishing is
+outward-facing: never run it unless asked.
 
 ## The Wikipedia source
 

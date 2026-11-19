@@ -79,13 +79,14 @@ by the article's address.
 With [Homebrew](https://brew.sh), on macOS or Linux:
 
 ```sh
-brew install jdf/historyflow/historyflow
+brew tap jdf/historyflow https://github.com/jdf/historyflow
+brew install historyflow
 ```
 
 Or download the archive for your platform from the
-[latest release](https://github.com/jdf/historyflow-cli/releases/latest), unpack
-it, and put `historyflow` on your `PATH`. There are builds for macOS (Apple
-silicon and Intel) and Linux (x86-64).
+[latest release](https://github.com/jdf/historyflow/releases/latest), unpack it,
+and put `historyflow` on your `PATH`. There are builds for macOS (Apple silicon
+and Intel) and Linux (x86-64).
 
 The command uses `git` to read a repository and `curl` to save an article.
 
