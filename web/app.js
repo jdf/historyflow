@@ -353,7 +353,7 @@ function selectAtPointer(event) {
 
 function showSummary() {
   $("title").textContent = summary.title;
-  document.title = `${summary.title} · history flow`;
+  document.title = `${summary.title} · Historyflow`;
   controls.mode.value = summary.mode;
   $("authors").replaceChildren(
     ...summary.authors.map((author) => {
@@ -383,7 +383,7 @@ function showSummary() {
   // The build differs on every commit, so it stays out of e2e screenshots.
   if (!params.has("e2e")) {
     const build = window.__historyflowBuild ?? { id: "unknown", date: "" };
-    status.textContent += ` · history flow ${version()}, build ${build.id} ${build.date}`;
+    status.textContent += ` · Historyflow ${version()}, build ${build.id} ${build.date}`;
   }
 }
 

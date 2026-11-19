@@ -1,8 +1,7 @@
-# historyflow
+# Historyflow
 
-historyflow draws the history of a document as a picture, using the _history
-flow_ visualization invented by
-[Fernanda Viégas](https://www.fernandaviegas.com/) and
+Historyflow draws the history of a document as a picture, using the
+visualization invented by [Fernanda Viégas](https://www.fernandaviegas.com/) and
 [Martin Wattenberg](https://www.bewitched.com/). Each version is a vertical
 line, as tall as the version is long and colored by who wrote each part; bands
 join each passage to the same passage in the next version. You can see at a
@@ -52,7 +51,7 @@ historyflow https://en.wikipedia.org/wiki/Chocolate -o chocolate.hflow
 | `--no-open`      | Print the viewer's address without opening a browser.      |
 
 Wikipedia asks every tool to say how to reach the person running it. Tell
-historyflow once, with an email address, a website, or your user name on a wiki:
+Historyflow once, with an email address, a website, or your user name on a wiki:
 
 ```sh
 git config --global historyflow.contact you@example.com
@@ -110,7 +109,7 @@ That builds `target/release/historyflow`; put it on your `PATH`.
 
 ## Credits
 
-The history flow visualization was invented by
+The Historyflow visualization was invented by
 [Fernanda Viégas](https://www.fernandaviegas.com/) and
 [Martin Wattenberg](https://www.bewitched.com/) at IBM Research in 2003, and
 described by them and Kushal Dave in _Studying Cooperation and Conflict between

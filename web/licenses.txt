@@ -1,10 +1,10 @@
-history flow is built with the software listed here, each under
-the license that follows its name. history flow's own license is
+Historyflow is built with the software listed here, each under
+the license that follows its name. Historyflow's own license is
 the first.
 
 
 ========================================================================
-history flow
+Historyflow
 ========================================================================
 
 MIT License

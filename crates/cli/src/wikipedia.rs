@@ -62,7 +62,7 @@ pub fn contact(given: Option<&str>) -> Result<String, Error> {
     let Some(contact) = found.filter(|contact| !contact.trim().is_empty()) else {
         return Err(
             "Wikipedia asks tools to say how to reach whoever is running them, \
-             so tell historyflow, once, how to reach you: an email address, \
+             so tell Historyflow, once, how to reach you: an email address, \
              a website, or your user name on a wiki.\n\n    \
              git config --global historyflow.contact you@example.com\n\n\
              It is sent to the wiki with each request, and nowhere else. \

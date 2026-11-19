@@ -154,10 +154,10 @@ def notices():
 
     rule = "=" * 72
     parts = [
-        "history flow is built with the software listed here, each under\n"
-        "the license that follows its name. history flow's own license is\n"
+        "Historyflow is built with the software listed here, each under\n"
+        "the license that follows its name. Historyflow's own license is\n"
         "the first.",
-        f"{rule}\nhistory flow\n{rule}\n\n" + (ROOT / "LICENSE").read_text().strip(),
+        f"{rule}\nHistoryflow\n{rule}\n\n" + (ROOT / "LICENSE").read_text().strip(),
         f"{rule}\nThe Rust standard library\n{rule}\n\n"
         "Copyright (c) The Rust Project Contributors\n\n" + RUST,
     ]

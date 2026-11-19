@@ -85,7 +85,7 @@ fn run(cli: Cli) -> Result<(), Error> {
         Subject::at(path, cli.first_parent)?
     };
     serve::serve(&subject, cli.port, |address| {
-        eprintln!("history flow is at {address} — press Ctrl-C to stop");
+        eprintln!("Historyflow is at {address} — press Ctrl-C to stop");
         if !cli.no_open {
             open(address);
         }
