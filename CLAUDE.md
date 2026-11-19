@@ -11,11 +11,35 @@ about the visual encoding or the diff.
 
 ## Commands
 
-See README § Commands. In short: `./dev` to build and serve
-(http://localhost:8790/), `cargo test --workspace` for logic,
-`tools/e2e.sh [--bless]` for browser goldens, `./presubmit.sh` before `main`
-moves.
+```sh
+./dev                  # build debug, serve http://localhost:8790/
+./dev release          # same, optimized
+./dev stop             # stop the dev server
+tools/build-cli.sh     # builds target/release/historyflow, viewer included
 
+cargo test --workspace # native unit tests
+tools/e2e.sh           # browser tests against the approved screenshots
+tools/e2e.sh --bless   # approve the current renderings
+./presubmit.sh         # formatting, notices, clippy, tests, e2e
+
+./deploy -n            # presubmit, then list what would be staged
+./deploy               # presubmit, then publish to mrfeinberg.com/historyflow/
+```
+
+- `README.md` is for someone using the program, and has four parts: what it is,
+  how to use it, how to install it, credits. Keep everything else out of it:
+  nothing about development, design decisions, or what the program does not do.
+  Notes for working on the code belong in this file.
+- `tools/e2e.sh` loads the release build in a pinned headless Chrome
+  (SwiftShader), fails on any console error, and compares each case in its
+  `CASES` list byte for byte with `tests/goldens/e2e/`; a mismatch leaves
+  `build/e2e-received-<name>.png` to compare. The goldens are exact only for
+  arm64 macOS; `E2E_NO_GOLDEN=1` skips the pixel comparison elsewhere. It then
+  runs `tools/e2e-ui.mjs`, which drives the page and checks its behavior.
+- `./deploy` mirrors `build/release/dist` into the `historyflow/` subtree of the
+  site repository, commits it, runs the site's Cloudflare publish and pushes.
+  The publish is of that repository's whole working tree, so check it for other
+  uncommitted edits first.
 - Version control is **jj** (colocated git), remote `origin` =
   github.com/jdf/historyflow (private). Publish with plain jj:
   `jj bookmark set main -r @-` then `jj git push --bookmark main`.
