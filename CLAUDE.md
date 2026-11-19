@@ -143,12 +143,12 @@ Tests never touch the network: `core` tests use a canned response, and
 Requests name the tool and its version (`wikipedia::user_agent`), with a contact
 in parentheses as Wikimedia's User-Agent policy asks. The contact is the person
 running the command, not this project: `cli::wikipedia::contact` takes it from
-`--contact`, `HISTORYFLOW_CONTACT` or `git config historyflow.contact`, and
-`--wikipedia` refuses to run without one, as git refuses to commit without a
-name. The command hands it to the page in `api/session`. The page on a plain web
-host has no contact to give and sends the name and version alone. Never put a
-default contact in the code, and never fall back to git's `user.email`: what is
-sent to the wiki is the user's to choose.
+`--contact`, `HISTORYFLOW_CONTACT` or `git config historyflow.contact`, and the
+command refuses to fetch an article without one, as git refuses to commit
+without a name. The command hands it to the page in `api/session`. The page on a
+plain web host has no contact to give and sends the name and version alone.
+Never put a default contact in the code, and never fall back to git's
+`user.email`: what is sent to the wiki is the user's to choose.
 
 ## Architecture rules
 
