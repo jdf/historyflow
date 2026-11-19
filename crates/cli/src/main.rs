@@ -1,106 +1,53 @@
-use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::Parser;
 use historyflow_cli::serve::{self, Subject};
 use historyflow_cli::{Error, git_file, wikipedia};
-use historyflow_core::{Archive, Mode};
+use historyflow_core::Archive;
 
 /// Shows how a document came to be, version by version: who wrote what,
 /// and what became of it.
 ///
-/// With no command, opens the viewer in your browser on what PATH names:
-/// a git repository (any file's history, on request), a file in one, or
-/// a history file. Everything is served from this machine; nothing is
-/// fetched from anywhere else.
+/// Opens the viewer in your browser on what WHAT names: a git repository
+/// (any file's history, on request), a file in one, a history file, or
+/// the address of a Wikipedia article. Everything is served from this
+/// machine, and nothing is fetched from anywhere else, except an
+/// article's history from its wiki.
 ///
-/// With --wikipedia, opens the viewer on an article's history instead,
-/// which your browser fetches from the wiki. Add --output to fetch it
-/// here and write it to a history file, opening nothing.
-///
-/// History files are written as archives (.hflow), which hold only what
-/// each version changed, unless the name given ends in .json: then as a
-/// bundle, plain JSON with every version's text written out.
+/// With --output, opens nothing: the history is written to a history
+/// file (.hflow), which holds only what each version changed and opens
+/// later without git or the wiki.
 #[derive(Parser)]
-#[command(name = "historyflow", version, args_conflicts_with_subcommands = true)]
+#[command(name = "historyflow", version)]
 struct Cli {
-    /// A git repository, a file in one, or a history file.
-    #[arg(default_value = ".", conflicts_with = "wikipedia")]
-    path: PathBuf,
-    /// Show a Wikipedia article's history: its address
-    /// (https://de.wikipedia.org/wiki/Schokolade), or just its title on
-    /// the English Wikipedia.
-    #[arg(long, value_name = "ARTICLE")]
-    wikipedia: Option<String>,
-    /// With --wikipedia: how many revisions to fetch, from the
-    /// article's first.
-    #[arg(long, value_name = "N", default_value_t = 500, requires = "wikipedia")]
-    revisions: u32,
-    /// With --wikipedia: how the wiki can reach you (an email address,
-    /// a website, a wiki user name), which Wikipedia asks tools to
-    /// say. Set it once instead with
-    /// `git config --global historyflow.contact you@example.com`.
-    #[arg(long, requires = "wikipedia")]
-    contact: Option<String>,
-    /// With --wikipedia: fetch the history now and write it to this
-    /// file, instead of opening the viewer. Open the file later with
-    /// `historyflow FILE`, and nothing is asked of the wiki again.
-    #[arg(short, long, value_name = "FILE", requires = "wikipedia")]
+    /// A git repository, a file in one, a history file, or a Wikipedia
+    /// article's address (https://en.wikipedia.org/wiki/Chocolate).
+    #[arg(default_value = ".")]
+    what: String,
+    /// Write the history to this file instead of opening the viewer.
+    #[arg(short, long, value_name = "FILE")]
     output: Option<PathBuf>,
+    /// For an article: how many revisions to fetch, from its first.
+    /// 500 unless given.
+    #[arg(long, value_name = "N")]
+    revisions: Option<u32>,
+    /// For an article: how the wiki can reach you (an email address, a
+    /// website, a wiki user name), which Wikipedia asks tools to say.
+    /// Set it once instead with
+    /// `git config --global historyflow.contact you@example.com`.
+    #[arg(long)]
+    contact: Option<String>,
+    /// For git: follow only the first parent of merges, so that a
+    /// merged branch appears as one version, at its merge.
+    #[arg(long)]
+    first_parent: bool,
     /// The port to serve on; another is chosen if it is taken.
     #[arg(long, default_value_t = 8793)]
     port: u16,
     /// Print the address and do not open a browser.
     #[arg(long)]
     no_open: bool,
-    /// Follow only the first parent of merges.
-    #[arg(long)]
-    first_parent: bool,
-    #[command(subcommand)]
-    command: Option<Command>,
-}
-
-#[derive(Subcommand)]
-enum Command {
-    /// The history of one file in a git repository, followed across
-    /// renames.
-    GitFile {
-        /// The file, inside a git working tree.
-        file: PathBuf,
-        /// Where to write the history; as JSON to standard output if
-        /// omitted.
-        #[arg(short, long)]
-        output: Option<PathBuf>,
-        /// How the page should compare versions unless told otherwise.
-        #[arg(long, value_enum, default_value = "lines")]
-        mode: ModeArg,
-        /// Follow only the first parent of merges: a merged branch
-        /// appears as one version, at its merge.
-        #[arg(long)]
-        first_parent: bool,
-        /// Keep only the most recent N versions.
-        #[arg(long, value_name = "N")]
-        max_versions: Option<usize>,
-    },
-    /// Rewrites a history file as the other kind: a bundle (.json) as an
-    /// archive, or an archive as a bundle.
-    Convert {
-        /// An archive or a bundle.
-        input: PathBuf,
-        #[arg(short, long)]
-        output: PathBuf,
-    },
-}
-
-#[derive(Clone, Copy, ValueEnum)]
-enum ModeArg {
-    /// Whole lines, each version diffed against the one before.
-    Lines,
-    /// Words, matched across the whole history.
-    Prose,
-    /// Sentences, as in the original history flow.
-    Sentences,
 }
 
 fn main() -> ExitCode {
@@ -114,70 +61,75 @@ fn main() -> ExitCode {
 }
 
 fn run(cli: Cli) -> Result<(), Error> {
-    let Some(command) = cli.command else {
-        let contact = match &cli.wikipedia {
-            Some(_) => wikipedia::contact(cli.contact.as_deref())?,
-            None => String::new(),
-        };
-        if let (Some(article), Some(output)) = (&cli.wikipedia, &cli.output) {
-            if cli.revisions == 0 {
-                return Err("there is nothing to write in no revisions".into());
-            }
-            let get = wikipedia::rested(|url: &str| {
-                wikipedia::curl(url, &contact, |seconds| {
-                    eprint!("\rthe wiki asks for a pause of {seconds} seconds…");
-                })
-            });
-            let archive = wikipedia::read(article, cli.revisions, get, |read| {
-                // The spaces overwrite a longer line about a pause.
-                eprint!("\r{read} revisions{:40}", "");
-            });
-            // End the line of progress, whatever came of it.
-            eprintln!();
-            let archive = archive?;
-            if archive.is_empty() {
-                return Err(
-                    format!("{}: the wiki has no readable revisions", archive.title).into(),
-                );
-            }
-            return write(&archive, output);
+    // An address is an article; anything else is a path.
+    let article = ["https://", "http://"]
+        .iter()
+        .any(|scheme| cli.what.starts_with(scheme));
+    let subject = if article {
+        let revisions = cli.revisions.unwrap_or(500);
+        let contact = wikipedia::contact(cli.contact.as_deref())?;
+        // Checks the address and the number before anything is fetched.
+        let subject = Subject::wikipedia(&cli.what, revisions, &contact)?;
+        if let Some(output) = &cli.output {
+            return write(&fetch(&cli.what, revisions, &contact)?, output);
         }
-        let subject = match &cli.wikipedia {
-            Some(article) => Subject::wikipedia(article, cli.revisions, &contact)?,
-            None => Subject::at(&cli.path, cli.first_parent)?,
-        };
-        return serve::serve(&subject, cli.port, |address| {
-            eprintln!("history flow is at {address} — press Ctrl-C to stop");
-            if !cli.no_open {
-                open(address);
-            }
-        });
+        subject
+    } else {
+        if cli.revisions.is_some() || cli.contact.is_some() {
+            return Err("--revisions and --contact are for a Wikipedia article's address".into());
+        }
+        let path = Path::new(&cli.what);
+        if let Some(output) = &cli.output {
+            return write(&history(path, cli.first_parent)?, output);
+        }
+        Subject::at(path, cli.first_parent)?
     };
-    match command {
-        Command::GitFile {
-            file,
-            output,
-            mode,
-            first_parent,
-            max_versions,
-        } => {
-            let options = git_file::Options {
-                first_parent,
-                max_versions,
-                mode: match mode {
-                    ModeArg::Lines => Mode::Lines,
-                    ModeArg::Prose => Mode::Prose,
-                    ModeArg::Sentences => Mode::Sentences,
-                },
-            };
-            let bundle = git_file::read(&file, &options)?;
-            match output {
-                Some(path) => write(&Archive::from_bundle(&bundle), &path),
-                None => Ok(std::io::stdout().write_all(&serde_json::to_vec(&bundle)?)?),
-            }
+    serve::serve(&subject, cli.port, |address| {
+        eprintln!("history flow is at {address} — press Ctrl-C to stop");
+        if !cli.no_open {
+            open(address);
         }
-        Command::Convert { input, output } => write(&historyflow_cli::read(&input)?, &output),
+    })
+}
+
+/// The one history a path names, to write out: a history file's own, or
+/// that of a file in a git repository.
+fn history(path: &Path, first_parent: bool) -> Result<Archive, Error> {
+    if path.is_dir() {
+        return Err(format!(
+            "{} is a directory: name the file whose history to write",
+            path.display()
+        )
+        .into());
     }
+    if historyflow_cli::is_history_file(path) {
+        return historyflow_cli::read(path);
+    }
+    let options = git_file::Options {
+        first_parent,
+        mode: git_file::mode_for(&path.to_string_lossy()),
+    };
+    Ok(Archive::from_bundle(&git_file::read(path, &options)?))
+}
+
+/// Fetches an article's history from its wiki, saying how it is going.
+fn fetch(article: &str, revisions: u32, contact: &str) -> Result<Archive, Error> {
+    let get = wikipedia::rested(|url: &str| {
+        wikipedia::curl(url, contact, |seconds| {
+            eprint!("\rthe wiki asks for a pause of {seconds} seconds…");
+        })
+    });
+    let archive = wikipedia::read(article, revisions, get, |read| {
+        // The spaces overwrite a longer line about a pause.
+        eprint!("\r{read} revisions{:40}", "");
+    });
+    // End the line of progress, whatever came of it.
+    eprintln!();
+    let archive = archive?;
+    if archive.is_empty() {
+        return Err(format!("{}: the wiki has no readable revisions", archive.title).into());
+    }
+    Ok(archive)
 }
 
 /// Writes the history and says what was written.

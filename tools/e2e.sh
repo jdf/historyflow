@@ -113,7 +113,7 @@ COMMAND_PID=$!
 # And the command on a Wikipedia article, which the test answers for.
 WIKI_PORT=8794
 lsof -ti :"$WIKI_PORT" -sTCP:LISTEN 2>/dev/null | xargs kill 2>/dev/null || true
-target/release/historyflow --wikipedia Chocolate --revisions 3 --contact e2e@example.com --no-open --port "$WIKI_PORT" 2>/dev/null &
+target/release/historyflow https://en.wikipedia.org/wiki/Chocolate --revisions 3 --contact e2e@example.com --no-open --port "$WIKI_PORT" 2>/dev/null &
 WIKI_PID=$!
 trap 'kill $SERVER_PID $COMMAND_PID $WIKI_PID 2>/dev/null' EXIT
 for port in "$COMMAND_PORT" "$WIKI_PORT"; do

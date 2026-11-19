@@ -121,6 +121,6 @@ with tempfile.TemporaryDirectory() as scratch:
     plain.write_text(json.dumps(bundle))
     subprocess.run(
         ["cargo", "run", "--quiet", "--release", "-p", "historyflow-cli", "--",
-         "convert", str(plain), "-o", str(out)],
+         str(plain), "-o", str(out)],
         cwd=root, check=True,
     )

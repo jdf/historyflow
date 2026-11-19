@@ -1,6 +1,6 @@
-//! Data sources that run outside the browser, and the files they write.
-//! Each source turns something with a history into a
-//! [`historyflow_core::Bundle`]; [`write`] stores it compactly.
+//! Data sources that run outside the browser, and the file they write.
+//! Each source turns something with a history into versions, which
+//! [`write`] stores compactly, as an archive.
 
 pub mod git_file;
 pub mod serve;
@@ -12,25 +12,27 @@ use historyflow_core::Archive;
 
 pub type Error = Box<dyn std::error::Error>;
 
-/// Reads a history from a file of either kind: an archive, or a bundle's
-/// JSON.
+/// Reads a history from a file: an archive, or the JSON a script may
+/// write one as.
 pub fn read(path: &Path) -> Result<Archive, Error> {
     let bytes = std::fs::read(path).map_err(|e| format!("{}: {e}", path.display()))?;
     Ok(Archive::read(&bytes).map_err(|e| format!("{}: {e}", path.display()))?)
 }
 
-/// Writes a history to a file: as a bundle's JSON, with every version's
-/// text written out, if the name ends in `.json`; otherwise as an
-/// archive. Returns the number of bytes written.
+/// Whether a file is a history rather than something with one: an
+/// archive, or (by its name) a script's JSON.
+pub fn is_history_file(path: &Path) -> bool {
+    let mut start = [0; 64];
+    let read = std::fs::File::open(path)
+        .and_then(|mut file| std::io::Read::read(&mut file, &mut start))
+        .unwrap_or(0);
+    Archive::is_archive(&start[..read]) || path.extension().is_some_and(|e| e == "json")
+}
+
+/// Writes a history to a file, as an archive. Returns the number of
+/// bytes written.
 pub fn write(archive: &Archive, path: &Path) -> Result<usize, Error> {
-    let bytes = if path
-        .extension()
-        .is_some_and(|extension| extension == "json")
-    {
-        serde_json::to_vec(&archive.to_bundle())?
-    } else {
-        archive.to_bytes()
-    };
+    let bytes = archive.to_bytes();
     std::fs::write(path, &bytes).map_err(|e| format!("{}: {e}", path.display()))?;
     Ok(bytes.len())
 }

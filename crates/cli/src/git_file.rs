@@ -21,12 +21,20 @@ use historyflow_core::{Bundle, Mode, SourceVersion};
 pub struct Options {
     /// Follow only the first parent of each merge.
     pub first_parent: bool,
-    /// Keep only this many of the most recent versions.
-    pub max_versions: Option<usize>,
     pub mode: Mode,
 }
 
 pub use crate::Error;
+
+/// How a file's versions are best compared, going by its name: prose by
+/// words, everything else by lines.
+pub fn mode_for(path: &str) -> Mode {
+    let extension = path.rsplit_once('.').map_or("", |(_, extension)| extension);
+    match extension.to_ascii_lowercase().as_str() {
+        "md" | "markdown" | "txt" | "rst" | "adoc" | "tex" | "org" => Mode::Prose,
+        _ => Mode::Lines,
+    }
+}
 
 /// Separates commits, and fields within a commit, in `git log` output.
 /// Neither can occur in a commit message git accepts as text.
@@ -161,9 +169,6 @@ fn log(root: &Path, path: &str, options: &Options) -> Result<Vec<Commit>, Error>
             current = path.clone();
         }
         commits.push(commit(hash, author, timestamp, message, path)?);
-    }
-    if let Some(max) = options.max_versions {
-        commits.truncate(max);
     }
     commits.reverse();
     Ok(commits)

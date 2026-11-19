@@ -8,33 +8,50 @@ Research notes on the original are in `docs/research/`.
 
 ## The `historyflow` command
 
-The command carries the viewer inside it and serves it from your own machine;
-nothing is fetched from anywhere else.
+The command carries the viewer inside it and serves it from your own machine. It
+takes one thing to look at, and works out what that is:
 
 ```sh
 tools/build-cli.sh                 # builds target/release/historyflow
 
-historyflow                        # browse the git repository you are in
+historyflow                        # the git repository you are in
 historyflow path/to/repo           # or another one
 historyflow src/main.rs            # a repository, opened on one file
 historyflow saved.hflow            # a history file
-historyflow --wikipedia https://en.wikipedia.org/wiki/Chocolate
+historyflow https://en.wikipedia.org/wiki/Chocolate    # a Wikipedia article
 ```
 
-Each opens your browser on the viewer. For a repository the page lists its
-tracked files as a tree, folders first and closed until pressed, with a filter
-that opens whatever matches. Binary files are left out, as is anything whose
-name, or a folder's above it, starts with a dot; name one on the command line to
-see it anyway. Choosing a file reads its history from git there and then. The
-file is followed across renames, and each commit that touched it is one version.
-Markdown and other prose is compared by words, and everything else by lines; the
-**compare** menu changes it.
+Each opens your browser on the viewer. Add `-o FILE` and it opens nothing, and
+instead writes the history to a [history file](#history-files), which opens
+later without git or the wiki:
 
-`--wikipedia` takes an article's address on any Wikipedia, or just its title on
-the English one, and shows its first 500 revisions; `--revisions N` asks for
-more or fewer. This is the one case where something is fetched: your browser
-asks the wiki for the history, as described under
-[Viewing a Wikipedia article's history](#viewing-a-wikipedia-articles-history).
+```sh
+historyflow src/main.rs -o main.hflow
+historyflow https://en.wikipedia.org/wiki/Chocolate -o chocolate.hflow
+historyflow main.hflow
+```
+
+### A git repository
+
+The page lists the repository's tracked files as a tree, folders first and
+closed until pressed, with a filter that opens whatever matches. Binary files
+are left out, as is anything whose name, or a folder's above it, starts with a
+dot; name one on the command line to see it anyway. Choosing a file reads its
+history from git there and then. The file is followed across renames, and each
+commit that touched it is one version. Markdown and other prose is compared by
+words, and everything else by lines; the **compare** menu changes it.
+
+Commits come in `git log` order, which interleaves the two sides of a merge by
+date. `--first-parent` follows only the mainline, so that a merged branch
+appears as one version, at its merge.
+
+### A Wikipedia article
+
+Give the article's address, on any Wikipedia. Its first 500 revisions are
+fetched; `--revisions N` asks for more or fewer. When viewing, your browser asks
+the wiki for the history, as described under
+[Viewing a Wikipedia article's history](#viewing-a-wikipedia-articles-history);
+with `-o`, the command fetches it itself, with `curl`.
 
 Wikipedia asks every tool to say how to reach whoever is running it, so before
 the first fetch tell historyflow how to reach you, as you once told git your
@@ -47,16 +64,7 @@ git config --global historyflow.contact you@example.com
 It is kept in git's configuration, sent to the wiki with each request (as
 `historyflow/0.1.1 (you@example.com)`), and goes nowhere else. `--contact` gives
 it for one run, and the `HISTORYFLOW_CONTACT` environment variable for a shell.
-Without one, `--wikipedia` stops and says this.
-
-Add `-o FILE` and the command fetches the history itself (with `curl`) and
-writes it as a history file, opening nothing; `historyflow FILE` then shows it
-without asking the wiki again:
-
-```sh
-historyflow --wikipedia Chocolate --revisions 2000 -o chocolate.hflow
-historyflow chocolate.hflow
-```
+Without one, the command stops and says this.
 
 If the wiki says it is being asked too fast, the command waits as long as the
 wiki asks and carries on.
@@ -65,33 +73,16 @@ Wikipedia's text is licensed CC BY-SA, and a history file made from an article
 holds that text and its editors' names; passing the file on is republishing it
 under that license.
 
-`--no-open` prints the address without opening a browser, `--port` picks the
-port, and `--first-parent` follows only the mainline of merges. The server
-listens only on this machine, and refuses requests that were not addressed to it
-by name, so that a page on another site cannot read the repository through your
-browser.
+### Serving
 
-## Writing a history file
+`--no-open` prints the address without opening a browser, and `--port` picks the
+port. The server listens only on this machine, and refuses requests that were
+not addressed to it by name, so that a page on another site cannot read the
+repository through your browser.
 
-The command also writes one file's history out, to keep or to pass on:
+## The page
 
-```sh
-historyflow git-file path/to/file.rs -o file.hflow
-```
-
-Open it with `historyflow file.hflow`, or drop it on the page, or use **Open…**.
-
-| Option             | Effect                                                                                |
-| ------------------ | ------------------------------------------------------------------------------------- |
-| `--mode lines`     | Default. Whole lines, each version diffed against the one before, like `git blame`.   |
-| `--mode prose`     | Words, matched across the whole history, so moved and restored text keeps its author. |
-| `--mode sentences` | Sentences, as in the original history flow.                                           |
-| `--first-parent`   | Follow only the mainline; a merged branch appears as one version at its merge.        |
-| `--max-versions N` | Keep only the most recent N versions.                                                 |
-
-The mode is only the file's suggestion; the page's **compare** menu switches
-between them. Without `--first-parent`, commits come in `git log` order, which
-interleaves the two sides of a merge by date.
+A history file can also be dropped on the page, or opened with **Open…**.
 
 Click or drag on the plot to place the crosshair: the vertical line picks a
 version, the horizontal line a place in it. The panel on the right shows that
@@ -141,10 +132,8 @@ fetched once can be opened again without asking the wiki.
 
 ## History files
 
-A history file is one of two kinds, and the page and the command read either.
-
-An **archive** (`.hflow`) holds only what each version changed, and is what the
-command and **Save** write:
+A history file (`.hflow`), also called an archive, holds only what each version
+changed. It is what the command and **Save** write:
 
 - Each distinct chunk of text (a word, a run of spaces, a punctuation mark, a
   line break) is stored once, however often it occurs.
@@ -166,15 +155,12 @@ size of the changes, not of the versions.
 | A 90 KB JavaScript file in git             | 44       | 2.09 MB              | 55 KB   |
 | The demo                                   | 54       | 232 KB               | 3 KB    |
 
-A **bundle** (`.json`) is the same history as plain JSON, every version's text
-written out: easy to write from a script and to read, and as large as the texts
-together. Its fields are `format` (`"historyflow-bundle/1"`), `title`, `mode`
+To make a history of something else, have a script write it as JSON, which the
+command and the page also read: an object with `format`
+(`"historyflow-bundle/1"`), `title`, `mode` (`lines`, `prose` or `sentences`)
 and `versions`, each version having `id`, `author`, `anonymous`, `timestamp`
-(seconds since 1970), `comment` and `text`.
-
-```sh
-historyflow convert history.json -o history.hflow   # and the other way round
-```
+(seconds since 1970), `comment` and `text`. Nothing writes that form; turn it
+into a history file with `historyflow history.json -o history.hflow`.
 
 `cargo run --release -p historyflow-core --example replay file.hflow` times
 reading a file and working out its authorship in each mode.
@@ -197,7 +183,7 @@ reading a file and working out its authorship in each mode.
   `wasm32-unknown-unknown` target on first use.
 - Node.js and npm — for prettier, the browser test driver and `wasm-opt`.
 - Python 3 — the dev server.
-- `git` — read by the `git-file` data source, and used by its tests.
+- `git` — read by the command, and used by its tests.
 - The site repository at `~/projects/mrfeinberg.com` and a logged-in `wrangler`
   — only for `./deploy`.
 

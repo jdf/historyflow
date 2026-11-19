@@ -77,14 +77,23 @@ a Wikipedia article); `--example replay` measures it.
 
 ## The command (`crates/cli`)
 
-`historyflow [PATH]` serves the viewer on the loopback address and opens a
-browser; `PATH` is a git repository, a file in one, or a history file.
-`historyflow --wikipedia ARTICLE [--revisions N]` serves it on a Wikipedia
-article instead: the command fetches nothing itself, and only tells the page (in
-`api/session`) which article to fetch and how much of it. With `-o FILE` it
-serves nothing: `cli::wikipedia` fetches the history by running `curl` (as
-`git_file` runs `git`, and to keep TLS out of the build) and writes an archive.
-Its `read` takes the fetching as a function, which is what the tests supply.
+`historyflow [WHAT] [-o FILE]` has no subcommands, by the user's design: what
+`WHAT` is decides what happens. An `http(s)://` address is a Wikipedia article;
+otherwise it is a path: a directory is a git repository, a history file is
+itself, and any other file is a file in a git repository. Without `-o` the
+command serves the viewer on the loopback address and opens a browser; with it,
+the history is written to a history file and nothing is opened. Do not add
+subcommands or flags that restate what the argument already says.
+
+For an article the command fetches nothing itself when serving: it tells the
+page (in `api/session`) which article and how much of it. With `-o`,
+`cli::wikipedia` fetches the history by running `curl` (as `git_file` runs
+`git`, and to keep TLS out of the build). Its `read` takes the fetching as a
+function, which is what the tests supply.
+
+The command never writes JSON: the user will never want every version's text
+written out. A bundle's JSON is read (by the command and the page) only so that
+a script can make a history, as `tools/make-sample.py` does.
 
 - The viewer is inside the binary: `build.rs` embeds `build/release/dist` as it
   is when the command is compiled (an empty list if it has not been built, in
@@ -98,10 +107,9 @@ Its `read` takes the fetching as a function, which is what the tests supply.
   asks `api/session` only when it finds that tag; on a plain host it never asks,
   so nothing 404s. `api/history?path=` reads one file's history from git
   (`git_file`) and returns it as an archive.
-- `git-file` and `convert` are the subcommands that write files. `git_file`
-  shells out to `git` (`log --follow`, `cat-file --batch`); tests build a real
-  repository in a temporary directory (`tests/common`), and `tools/e2e.sh`
-  builds one for the browser test of the command.
+- `git_file` shells out to `git` (`log --follow`, `cat-file --batch`); tests
+  build a real repository in a temporary directory (`tests/common`), and
+  `tools/e2e.sh` builds one for the browser test of the command.
 
 ## Releases
 

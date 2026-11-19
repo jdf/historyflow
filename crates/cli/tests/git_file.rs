@@ -60,18 +60,6 @@ fn a_deletion_is_an_empty_version() {
 }
 
 #[test]
-fn max_versions_keeps_the_most_recent() {
-    let dir = repository();
-    let options = Options {
-        max_versions: Some(2),
-        ..Options::default()
-    };
-    let bundle = git_file::read(&dir.path().join("src/b.txt"), &options).unwrap();
-    let comments: Vec<_> = bundle.versions.iter().map(|v| v.comment.as_str()).collect();
-    assert_eq!(comments, ["Edit a", "Rename a to b"]);
-}
-
-#[test]
 fn reports_a_file_with_no_history() {
     let dir = repository();
     let error = git_file::read(&dir.path().join("src/missing.txt"), &Options::default());
@@ -90,24 +78,37 @@ fn the_bundle_round_trips_through_json() {
 }
 
 #[test]
-fn a_history_is_written_as_an_archive_or_as_json_by_its_name() {
+fn a_history_is_written_as_an_archive_and_read_from_either_kind_of_file() {
     let dir = repository();
     let bundle = git_file::read(&dir.path().join("src/b.txt"), &Options::default()).unwrap();
     let archive = historyflow_core::Archive::from_bundle(&bundle);
     let packed = dir.path().join("out.hflow");
-    let plain = dir.path().join("out.json");
+    // The name does not make it anything but an archive.
+    let misnamed = dir.path().join("out.json");
+    let scripted = dir.path().join("scripted.json");
     historyflow_cli::write(&archive, &packed).unwrap();
-    historyflow_cli::write(&archive, &plain).unwrap();
+    historyflow_cli::write(&archive, &misnamed).unwrap();
+    std::fs::write(&scripted, serde_json::to_vec(&bundle).unwrap()).unwrap();
 
-    assert!(
-        std::fs::read(&packed)
-            .unwrap()
-            .starts_with(b"historyflow-archive/1\n")
-    );
-    assert!(std::fs::read(&plain).unwrap().starts_with(b"{"));
-    for path in [&packed, &plain] {
+    for path in [&packed, &misnamed, &scripted] {
+        assert!(historyflow_cli::is_history_file(path));
         assert_eq!(historyflow_cli::read(path).unwrap().to_bundle(), bundle);
     }
+    for path in [&packed, &misnamed] {
+        let written = std::fs::read(path).unwrap();
+        assert!(written.starts_with(b"historyflow-archive/1\n"));
+    }
+    assert!(!historyflow_cli::is_history_file(
+        &dir.path().join("src/b.txt")
+    ));
     let missing = historyflow_cli::read(&dir.path().join("nonesuch")).unwrap_err();
     assert!(missing.to_string().contains("nonesuch"));
+}
+
+#[test]
+fn prose_is_told_from_source_by_its_name() {
+    use historyflow_core::Mode;
+    assert_eq!(git_file::mode_for("notes/README.MD"), Mode::Prose);
+    assert_eq!(git_file::mode_for("src/main.rs"), Mode::Lines);
+    assert_eq!(git_file::mode_for("Makefile"), Mode::Lines);
 }

@@ -655,7 +655,7 @@ try {
   );
   await wiki.close();
 
-  // The command given --wikipedia Chocolate --revisions 3 serves the
+  // The command given the article's address and --revisions 3 serves the
   // same page, told which article to fetch and how much of it.
   wiki = await openWiki("?e2e", batches, commandWikiUrl);
   loaded = await wiki.evaluate("window.__historyflow.summary()");

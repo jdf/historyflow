@@ -10,7 +10,7 @@
 
 use std::path::{Path, PathBuf};
 
-use historyflow_core::{Archive, Mode, wikipedia};
+use historyflow_core::{Archive, wikipedia};
 use serde::Serialize;
 use tiny_http::{Header, Method, Request, Server};
 
@@ -49,11 +49,8 @@ impl Subject {
     /// or a directory in one.
     pub fn at(path: &Path, first_parent: bool) -> Result<Subject, Error> {
         if path.is_file() {
-            let start = std::fs::read(path)?;
-            if Archive::is_archive(&start) || path.extension().is_some_and(|e| e == "json") {
-                let archive =
-                    Archive::read(&start).map_err(|e| format!("{}: {e}", path.display()))?;
-                return Ok(Subject::History(archive.to_bytes()));
+            if crate::is_history_file(path) {
+                return Ok(Subject::History(crate::read(path)?.to_bytes()));
             }
             let (root, open) = git_file::locate(path)?;
             return Ok(Subject::Repository {
@@ -226,8 +223,7 @@ fn history(subject: &Subject, query: &str) -> Reply {
             };
             let options = git_file::Options {
                 first_parent: *first_parent,
-                max_versions: None,
-                mode: mode_for(&path),
+                mode: git_file::mode_for(&path),
             };
             match git_file::read_in(root, &path, &options) {
                 Ok(bundle) => Archive::from_bundle(&bundle),
@@ -236,15 +232,6 @@ fn history(subject: &Subject, query: &str) -> Reply {
         }
     };
     Reply::ok("application/octet-stream", archive.to_bytes())
-}
-
-/// Prose is compared by words, everything else by lines.
-fn mode_for(path: &str) -> Mode {
-    let extension = path.rsplit_once('.').map_or("", |(_, extension)| extension);
-    match extension.to_ascii_lowercase().as_str() {
-        "md" | "markdown" | "txt" | "rst" | "adoc" | "tex" | "org" => Mode::Prose,
-        _ => Mode::Lines,
-    }
 }
 
 fn file(viewer: Files, path: &str) -> Reply {
