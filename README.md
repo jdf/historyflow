@@ -90,6 +90,18 @@ and Intel) and Linux (x86-64).
 
 The command uses `git` to read a repository and `curl` to save an article.
 
+### Building from source
+
+With [rustup](https://rustup.rs) and [Node.js](https://nodejs.org) installed:
+
+```sh
+git clone https://github.com/jdf/historyflow
+cd historyflow
+tools/build-cli.sh
+```
+
+That builds `target/release/historyflow`; put it on your `PATH`.
+
 ## Credits
 
 The history flow visualization was invented by
