@@ -42,7 +42,11 @@ fn collect(root: &Path, dir: &Path, files: &mut Vec<(String, PathBuf)>) {
         if path.is_dir() {
             println!("cargo:rerun-if-changed={}", path.display());
             collect(root, &path, files);
-        } else if entry.file_name() != ".DS_Store" {
+        } else if entry.file_name() != ".DS_Store"
+            // The paper the About box links to is on the web site only:
+            // it would add a megabyte to the command.
+            && path.extension().is_none_or(|extension| extension != "pdf")
+        {
             let relative = path.strip_prefix(root).unwrap();
             let name: Vec<_> = relative.iter().map(|part| part.to_string_lossy()).collect();
             let absolute = path.canonicalize().unwrap();

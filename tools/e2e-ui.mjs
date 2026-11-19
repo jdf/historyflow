@@ -688,13 +688,16 @@ try {
     const box = document.getElementById("about");
     const link = box.querySelector('a[href="licenses.txt"]');
     const notices = await (await fetch(link.href)).text();
-    return { open: box.open, text: box.textContent, notices };
+    const paper = box.querySelector("cite").closest("a")?.href;
+    return { open: box.open, text: box.textContent, notices, paper };
   });
   check(
     "the About box credits Viégas and Wattenberg",
     about.open &&
       about.text.includes("Fernanda Viégas") &&
-      about.text.includes("Martin Wattenberg"),
+      about.text.includes("Martin Wattenberg") &&
+      about.paper ===
+        "https://mrfeinberg.com/historyflow/viegas-history-flow-chi04.pdf",
     about.text,
   );
   check(

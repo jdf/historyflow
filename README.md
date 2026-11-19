@@ -112,8 +112,9 @@ That builds `target/release/historyflow`; put it on your `PATH`.
 The Historyflow visualization was invented by
 [Fernanda Viégas](https://www.fernandaviegas.com/) and
 [Martin Wattenberg](https://www.bewitched.com/) at IBM Research in 2003, and
-described by them and Kushal Dave in _Studying Cooperation and Conflict between
-Authors with history flow Visualizations_ (CHI 2004).
+described by them and Kushal Dave in
+[_Studying Cooperation and Conflict between Authors with history flow Visualizations_](https://mrfeinberg.com/historyflow/viegas-history-flow-chi04.pdf)
+(CHI 2004).
 
 This implementation is by Jonathan Feinberg, under the [MIT license](LICENSE).
 The viewer's About box lists the licenses of the software it is built with.
