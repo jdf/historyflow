@@ -256,6 +256,7 @@ fn file(viewer: Files, path: &str) -> Reply {
         "css" => "text/css; charset=utf-8",
         "wasm" => "application/wasm",
         "json" => "application/json",
+        "txt" => "text/plain; charset=utf-8",
         _ => "application/octet-stream",
     };
     if name == "index.html" {

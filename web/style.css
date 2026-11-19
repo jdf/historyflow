@@ -343,6 +343,19 @@ dialog input {
   border-radius: 3px;
   padding: 4px 6px;
 }
+dialog p {
+  line-height: 1.45;
+  margin: 0 0 10px;
+}
+dialog a {
+  color: #9cc4ff;
+}
+#about {
+  width: 440px;
+}
+#about-build {
+  color: #888;
+}
 dialog menu {
   display: flex;
   justify-content: flex-end;

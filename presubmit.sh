@@ -18,6 +18,9 @@ fi
 echo "== format (rustfmt)"
 cargo fmt --all --check
 
+echo "== license notices"
+tools/notices.py --check
+
 echo "== clippy (native + wasm)"
 cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo clippy -p historyflow-web --target wasm32-unknown-unknown --locked -- -D warnings

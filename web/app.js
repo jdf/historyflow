@@ -780,6 +780,13 @@ try {
       Number($("wiki-limit").value) || 500,
     );
   };
+  $("about-button").onclick = () => {
+    const build = window.__historyflowBuild;
+    $("about-build").textContent = build
+      ? `Build ${build.id}, ${build.date}`
+      : "";
+    $("about").showModal();
+  };
   $("stop").onclick = () => {
     if (loading) loading.stopped = true;
     loading = null;

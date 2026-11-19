@@ -163,6 +163,10 @@ Never put a default contact in the code, and never fall back to git's
 - `wasm-bindgen` is pinned with `=` in `crates/web/Cargo.toml`; the CLI is
   installed to match from `Cargo.lock`. Bump the crate and the CLI follows.
 - `unsafe` is forbidden workspace-wide.
+- The About box links to `web/licenses.txt`, the license notices of every crate
+  compiled into the viewer or the command. It is written by `tools/notices.py`
+  and checked in; presubmit fails if it is out of date, so run the script after
+  any change to the dependencies.
 - American spelling everywhere: code, comments, docs, UI text and commit
   messages (color, gray, license, behavior, normalize).
 - Markdown, `web/` and `tools/*.mjs` are formatted by prettier

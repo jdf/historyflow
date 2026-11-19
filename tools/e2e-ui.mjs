@@ -655,6 +655,56 @@ try {
   );
   await wiki.close();
 
+  // The dialog takes the article's address, as copied from a browser,
+  // and not a title, which would have to be guessed.
+  wiki = await openWiki("?e2e", batches);
+  await wiki.click("#wikipedia");
+  const valid = (text) =>
+    wiki.evaluate((text) => {
+      const field = document.getElementById("wiki-article");
+      field.value = text;
+      return field.checkValidity();
+    }, text);
+  check("the dialog refuses a bare title", !(await valid("Chocolate")));
+  check(
+    "the dialog refuses an address that is not an article's",
+    !(await valid("https://en.wikipedia.org/")),
+  );
+  check(
+    "the dialog accepts an article's address",
+    await valid("https://en.wikipedia.org/wiki/Chocolate#History"),
+  );
+  await wiki.click("#wiki button[value=load]");
+  await eventually(
+    "the dialog's article is fetched",
+    () => wiki.evaluate("window.__historyflow.summary().title"),
+    (title) => title === "Chocolate",
+  );
+
+  // The About box credits the visualization's inventors and leads to the
+  // license notices, which are served alongside the page.
+  await wiki.click("#about-button");
+  const about = await wiki.evaluate(async () => {
+    const box = document.getElementById("about");
+    const link = box.querySelector('a[href="licenses.txt"]');
+    const notices = await (await fetch(link.href)).text();
+    return { open: box.open, text: box.textContent, notices };
+  });
+  check(
+    "the About box credits Viégas and Wattenberg",
+    about.open &&
+      about.text.includes("Fernanda Viégas") &&
+      about.text.includes("Martin Wattenberg"),
+    about.text,
+  );
+  check(
+    "the license notices are there to read",
+    about.notices.includes("imara-diff") &&
+      about.notices.includes("Apache License") &&
+      about.notices.includes("Permission is hereby granted"),
+  );
+  await wiki.close();
+
   // The command given the article's address and --revisions 3 serves the
   // same page, told which article to fetch and how much of it.
   wiki = await openWiki("?e2e", batches, commandWikiUrl);
