@@ -114,8 +114,9 @@ fn history(path: &Path, first_parent: bool) -> Result<Archive, Error> {
 
 /// Fetches an article's history from its wiki, saying how it is going.
 fn fetch(article: &str, revisions: u32, contact: &str) -> Result<Archive, Error> {
+    let client = wikipedia::Client::new(contact);
     let get = wikipedia::rested(|url: &str| {
-        wikipedia::curl(url, contact, |seconds| {
+        client.get(url, |seconds| {
             eprint!("\rthe wiki asks for a pause of {seconds} seconds…");
         })
     });

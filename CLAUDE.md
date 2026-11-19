@@ -111,9 +111,12 @@ subcommands or flags that restate what the argument already says.
 
 For an article the command fetches nothing itself when serving: it tells the
 page (in `api/session`) which article and how much of it. With `-o`,
-`cli::wikipedia` fetches the history by running `curl` (as `git_file` runs
-`git`, and to keep TLS out of the build). Its `read` takes the fetching as a
-function, which is what the tests supply.
+`cli::wikipedia` fetches the history itself, over HTTPS with `ureq` and
+`rustls`, which are linked in so that the command needs no `curl`. (`git` is
+still run as a program: someone looking at a repository has it.) Its `read`
+takes the fetching as a function, which is what the tests supply. The TLS
+library has C in it, so the release workflow installs `musl-tools` for the Linux
+build.
 
 The command never writes JSON: the user will never want every version's text
 written out. A bundle's JSON is read (by the command and the page) only so that

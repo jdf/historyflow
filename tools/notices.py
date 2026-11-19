@@ -39,6 +39,9 @@ KNOWN = [
     ("Apache-2.0", "Apache License"),
     ("Zlib", "This software is provided 'as-is'"),
     ("Unicode-3.0", "UNICODE LICENSE V3"),
+    ("ISC", "Permission to use, copy, modify, and/or distribute this software"),
+    ("BSD-3-Clause", "Redistribution and use in source and binary forms"),
+    ("CDLA-Permissive-2.0", "Community Data License Agreement"),
 ]
 
 RUST = """Permission is hereby granted, free of charge, to any
@@ -110,6 +113,9 @@ def texts(directory, licenses, crate):
         and re.match(r"(?i)(licen[sc]e|copying|notice)", path.name)
     )
     out = []
+    # ring is made of parts under several licenses, each in its own file.
+    if crate.startswith("ring "):
+        out += files
     for wanted in licenses:
         phrase = dict(KNOWN)[wanted]
         matching = [
