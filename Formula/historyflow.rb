@@ -2,24 +2,24 @@
 class Historyflow < Formula
   desc "See how a document came to be, version by version"
   homepage "https://github.com/jdf/historyflow"
-  version "0.2.2"
+  version "0.2.3"
   license "MIT"
 
   on_macos do
     on_arm do
-      url "https://github.com/jdf/historyflow/releases/download/v0.2.2/historyflow-0.2.2-aarch64-apple-darwin.tar.gz"
-      sha256 "bd63afa3d6fff8d8d3f98244a5a32ad562fa61e0c5eaad2462654f78ae498fa1"
+      url "https://github.com/jdf/historyflow/releases/download/v0.2.3/historyflow-0.2.3-aarch64-apple-darwin.tar.gz"
+      sha256 "582413f5a335aa1338a5469a04293429b28c19c0f327f57dad6011821acf527a"
     end
     on_intel do
-      url "https://github.com/jdf/historyflow/releases/download/v0.2.2/historyflow-0.2.2-x86_64-apple-darwin.tar.gz"
-      sha256 "6ddeaaaeaf4827e74b57f826ad324ad29186259de7d39edaef15ee971ae6a366"
+      url "https://github.com/jdf/historyflow/releases/download/v0.2.3/historyflow-0.2.3-x86_64-apple-darwin.tar.gz"
+      sha256 "56143bf1313f1d192955bccecf5359404542907f036dcd04b279187578a79227"
     end
   end
 
   on_linux do
     on_intel do
-      url "https://github.com/jdf/historyflow/releases/download/v0.2.2/historyflow-0.2.2-x86_64-unknown-linux-musl.tar.gz"
-      sha256 "537ca39f4048ded71f4c5c285b34504b4f81e5c3aee9b0d1a1e018ec465e621a"
+      url "https://github.com/jdf/historyflow/releases/download/v0.2.3/historyflow-0.2.3-x86_64-unknown-linux-musl.tar.gz"
+      sha256 "65499d0aff3a4c8a3cf59ee4812722a3065a6f18e568cc01d86e3ad07364ba18"
     end
   end
 
