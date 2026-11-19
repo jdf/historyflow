@@ -19,11 +19,12 @@ moves.
 - Version control is **jj** (colocated git), remote `origin` =
   github.com/jdf/historyflow (private). Publish with plain jj:
   `jj bookmark set main -r @-` then `jj git push --bookmark main`.
-- **Do not push after every small change.** Every push to `main` runs CI, and
-  the user has asked that it not run for each small change. Commit locally as
-  work is finished, check it with `./presubmit.sh`, and push when a substantial
-  piece of work is complete or when asked. After a push, wait for CI's result
-  before calling it good.
+- **Run `./presubmit.sh` locally before a push, and do not wait for GitHub's CI
+  afterwards.** The user's rule: the local presubmit is the check, and waiting
+  on CI is slow and silly for a hobby project. Commit locally as work is
+  finished and push when a substantial piece is complete or when asked, not
+  after every small change. The browser tests hang if the laptop's lid is closed
+  (headless Chrome cannot draw); that is not a failure of the code.
 - Never run `./deploy` without `-n` unless asked: it commits to the site repo
   (`~/projects/mrfeinberg.com`) and publishes
   https://mrfeinberg.com/historyflow/.
