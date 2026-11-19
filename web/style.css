@@ -12,6 +12,30 @@ body {
   display: flex;
   flex-direction: column;
 }
+#top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: #181818;
+  border-bottom: 1px solid #333;
+}
+#home {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-right: auto;
+  font-size: 14px;
+  font-weight: 600;
+  color: #ddd;
+  text-decoration: none;
+}
+#home:hover {
+  color: #fff;
+}
+a.button {
+  text-decoration: none;
+}
 header {
   display: flex;
   align-items: center;
@@ -35,7 +59,8 @@ label {
   font-size: 10px;
 }
 select,
-button {
+button,
+a.button {
   font: inherit;
   font-size: 12px;
   color: #ddd;
@@ -301,6 +326,7 @@ body.dragging #plot {
 #status {
   padding: 4px 12px;
 }
+body.no-ui #top,
 body.no-ui header,
 body.no-ui aside,
 body.no-ui #reader,
