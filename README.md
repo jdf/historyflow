@@ -8,6 +8,12 @@ line, as tall as the version is long and colored by who wrote each part; bands
 join each passage to the same passage in the next version. You can see at a
 glance who wrote what, when, and what became of it.
 
+![The history of Wikipedia's Chocolate article](docs/chocolate.png)
+
+_Wikipedia's article on chocolate up to its 1,500th revision, in 2006. The text
+is its editors', under
+[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)._
+
 It reads the history of a file in a git repository or of a Wikipedia article,
 and runs in your browser, either from the `historyflow` command or at
 https://mrfeinberg.com/historyflow/.
