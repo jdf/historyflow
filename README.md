@@ -80,7 +80,7 @@ With [Homebrew](https://brew.sh), on macOS or Linux:
 
 ```sh
 brew tap jdf/historyflow https://github.com/jdf/historyflow
-brew install historyflow
+brew install jdf/historyflow/historyflow
 ```
 
 Or download the archive for your platform from the
